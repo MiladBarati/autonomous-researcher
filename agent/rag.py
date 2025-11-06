@@ -19,6 +19,9 @@ except ImportError:
     from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from config import Config
+from agent.logger import get_logger
+
+logger = get_logger("rag")
 
 
 class RAGPipeline:
@@ -50,7 +53,7 @@ class RAGPipeline:
         )
         
         # Initialize embedding model
-        print(f"Loading embedding model: {Config.EMBEDDING_MODEL}")
+        logger.info(f"Loading embedding model: {Config.EMBEDDING_MODEL}")
         self.embedding_model = SentenceTransformer(Config.EMBEDDING_MODEL)
         
         # Initialize ChromaDB client
@@ -69,13 +72,13 @@ class RAGPipeline:
         """Get existing collection or create new one"""
         try:
             collection = self.client.get_collection(name=self.collection_name)
-            print(f"Using existing collection: {self.collection_name}")
+            logger.debug(f"Using existing collection: {self.collection_name}")
         except:
             collection = self.client.create_collection(
                 name=self.collection_name,
                 metadata={"hnsw:space": "cosine"}
             )
-            print(f"Created new collection: {self.collection_name}")
+            logger.info(f"Created new collection: {self.collection_name}")
         
         return collection
     
@@ -157,16 +160,16 @@ class RAGPipeline:
             return 0
         
         # Chunk documents
-        print(f"Chunking {len(documents)} documents...")
+        logger.debug(f"Chunking {len(documents)} documents...")
         chunks = self.chunk_documents(documents)
         
         if not chunks:
             return 0
         
-        print(f"Created {len(chunks)} chunks")
+        logger.debug(f"Created {len(chunks)} chunks")
         
         # Generate embeddings
-        print("Generating embeddings...")
+        logger.debug("Generating embeddings...")
         embeddings = self.embed_chunks(chunks)
         
         # Prepare data for ChromaDB
@@ -182,7 +185,7 @@ class RAGPipeline:
             metadatas.append(metadata)
         
         # Store in ChromaDB
-        print("Storing in ChromaDB...")
+        logger.debug("Storing in ChromaDB...")
         self.collection.add(
             ids=ids,
             embeddings=embeddings,
@@ -190,7 +193,7 @@ class RAGPipeline:
             metadatas=metadatas
         )
         
-        print(f"Successfully stored {len(chunks)} chunks")
+        logger.info(f"Successfully stored {len(chunks)} chunks")
         return len(chunks)
     
     def retrieve(self, query: str, top_k: int = None) -> List[Dict[str, Any]]:
@@ -248,9 +251,9 @@ class RAGPipeline:
         try:
             self.client.delete_collection(name=self.collection_name)
             self.collection = self._get_or_create_collection()
-            print(f"Cleared collection: {self.collection_name}")
+            logger.info(f"Cleared collection: {self.collection_name}")
         except Exception as e:
-            print(f"Error clearing collection: {e}")
+            logger.error(f"Error clearing collection: {e}", exc_info=True)
     
     def format_retrieved_context(self, chunks: List[Dict[str, Any]]) -> str:
         """

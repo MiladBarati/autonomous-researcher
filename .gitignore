@@ -17,6 +17,9 @@ chroma_db/
 # Research reports
 research_report_*.md
 
+# Logs
+logs/
+
 # Environment variables
 .env
 

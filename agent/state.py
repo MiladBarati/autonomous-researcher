@@ -2,6 +2,7 @@
 LangGraph State Definition for Autonomous Research Agent
 """
 
+import uuid
 from typing import TypedDict, List, Dict, Any, Optional
 from langchain_core.messages import BaseMessage
 
@@ -12,6 +13,7 @@ class ResearchState(TypedDict):
     
     Attributes:
         topic: The research topic provided by the user
+        request_id: Unique identifier for this research request
         research_plan: The agent's planned research strategy
         search_queries: List of search queries to execute
         search_results: Results from web searches
@@ -27,6 +29,7 @@ class ResearchState(TypedDict):
         status: Current status of the research process
     """
     topic: str
+    request_id: str
     research_plan: Optional[str]
     search_queries: List[str]
     search_results: List[Dict[str, Any]]
@@ -42,16 +45,20 @@ class ResearchState(TypedDict):
     status: str
 
 
-def create_initial_state(topic: str) -> ResearchState:
+def create_initial_state(topic: str, request_id: Optional[str] = None) -> ResearchState:
     """
     Create initial state for a new research task.
     
     Args:
         topic: The research topic
+        request_id: Optional request ID (generated if not provided)
         
     Returns:
         Initial ResearchState
     """
+    if request_id is None:
+        request_id = str(uuid.uuid4())
+    
     return ResearchState(
         topic=topic,
         research_plan=None,
@@ -66,6 +73,7 @@ def create_initial_state(topic: str) -> ResearchState:
         synthesis=None,
         messages=[],
         step_count=0,
-        status="initialized"
+        status="initialized",
+        request_id=request_id
     )
 

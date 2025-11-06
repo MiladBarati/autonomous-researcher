@@ -19,7 +19,10 @@ from langgraph.graph import StateGraph, END
 from agent.state import ResearchState
 from agent.tools import ToolManager
 from agent.rag import RAGPipeline
+from agent.logger import get_logger, set_logging_context
 from config import get_llm, Config
+
+logger = get_logger("graph")
 
 
 class ResearchAgent:
@@ -70,7 +73,8 @@ class ResearchAgent:
         Returns:
             Updated state with research plan and queries
         """
-        print("\n=== PLANNING RESEARCH ===")
+        set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
+        logger.info("=== PLANNING RESEARCH ===")
         
         topic = state["topic"]
         
@@ -122,8 +126,8 @@ SEARCH QUERIES:
         if not queries:
             queries = [topic, f"{topic} overview", f"{topic} recent developments"]
         
-        print(f"Research Plan Created")
-        print(f"Generated {len(queries)} search queries")
+        logger.info("Research Plan Created")
+        logger.info(f"Generated {len(queries)} search queries")
         
         return {
             "research_plan": plan_text,
@@ -144,18 +148,19 @@ SEARCH QUERIES:
         Returns:
             Updated state with search results
         """
-        print("\n=== SEARCHING WEB ===")
+        set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
+        logger.info("=== SEARCHING WEB ===")
         
         queries = state["search_queries"]
         all_results = []
         
         for i, query in enumerate(queries[:5], 1):  # Limit to 5 queries
-            print(f"Query {i}/{len(queries[:5])}: {query}")
+            logger.debug(f"Query {i}/{len(queries[:5])}: {query}")
             results = self.tools.tavily.search(query, max_results=3)
             all_results.extend(results)
-            print(f"  Found {len(results)} results")
+            logger.debug(f"  Found {len(results)} results")
         
-        print(f"Total search results: {len(all_results)}")
+        logger.info(f"Total search results: {len(all_results)}")
         
         return {
             "search_results": all_results,
@@ -173,15 +178,16 @@ SEARCH QUERIES:
         Returns:
             Updated state with scraped content
         """
-        print("\n=== SCRAPING CONTENT ===")
+        set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
+        logger.info("=== SCRAPING CONTENT ===")
         
         search_results = state["search_results"]
         urls = [result["url"] for result in search_results if result.get("url")]
         
-        print(f"Scraping {min(len(urls), Config.MAX_SCRAPE_URLS)} URLs...")
+        logger.info(f"Scraping {min(len(urls), Config.MAX_SCRAPE_URLS)} URLs...")
         scraped = self.tools.scraper.scrape_multiple(urls, max_urls=Config.MAX_SCRAPE_URLS)
         
-        print(f"Successfully scraped {len(scraped)} pages")
+        logger.info(f"Successfully scraped {len(scraped)} pages")
         
         return {
             "scraped_content": scraped,
@@ -199,12 +205,13 @@ SEARCH QUERIES:
         Returns:
             Updated state with arxiv papers
         """
-        print("\n=== SEARCHING ARXIV ===")
+        set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
+        logger.info("=== SEARCHING ARXIV ===")
         
         topic = state["topic"]
         papers = self.tools.arxiv.search(topic, max_results=Config.MAX_ARXIV_RESULTS)
         
-        print(f"Found {len(papers)} ArXiv papers")
+        logger.info(f"Found {len(papers)} ArXiv papers")
         
         return {
             "arxiv_papers": papers,
@@ -222,13 +229,14 @@ SEARCH QUERIES:
         Returns:
             Updated state with processed documents
         """
-        print("\n=== PROCESSING DOCUMENTS ===")
+        set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
+        logger.info("=== PROCESSING DOCUMENTS ===")
         
         all_docs = []
         
         # Add scraped web content
         all_docs.extend(state["scraped_content"])
-        print(f"Added {len(state['scraped_content'])} web documents")
+        logger.debug(f"Added {len(state['scraped_content'])} web documents")
         
         # Add arxiv papers (summaries)
         for paper in state["arxiv_papers"]:
@@ -239,14 +247,14 @@ SEARCH QUERIES:
                 "source": "arxiv",
                 "authors": paper["authors"]
             })
-        print(f"Added {len(state['arxiv_papers'])} ArXiv paper summaries")
+        logger.debug(f"Added {len(state['arxiv_papers'])} ArXiv paper summaries")
         
         # Optional: Process ArXiv PDFs (commented out for speed, can be enabled)
         # pdf_content = self.tools.pdf_processor.extract_from_arxiv_papers(state["arxiv_papers"][:2])
         # all_docs.extend(pdf_content)
-        # print(f"Processed {len(pdf_content)} PDFs")
+        # logger.debug(f"Processed {len(pdf_content)} PDFs")
         
-        print(f"Total documents: {len(all_docs)}")
+        logger.info(f"Total documents: {len(all_docs)}")
         
         return {
             "all_documents": all_docs,
@@ -264,12 +272,13 @@ SEARCH QUERIES:
         Returns:
             Updated state with vector store info
         """
-        print("\n=== EMBEDDING AND STORING ===")
+        set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
+        logger.info("=== EMBEDDING AND STORING ===")
         
         documents = state["all_documents"]
         
         if not documents:
-            print("No documents to store")
+            logger.warning("No documents to store")
             return {
                 "step_count": state["step_count"] + 1,
                 "status": "no_documents"
@@ -279,7 +288,7 @@ SEARCH QUERIES:
         chunk_count = self.rag.store_documents(documents)
         
         stats = self.rag.get_collection_stats()
-        print(f"Vector store stats: {stats}")
+        logger.info(f"Vector store stats: {stats}")
         
         return {
             "vector_store_id": self.rag.collection_name,
@@ -297,14 +306,15 @@ SEARCH QUERIES:
         Returns:
             Updated state with synthesis
         """
-        print("\n=== RETRIEVING AND SYNTHESIZING ===")
+        set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
+        logger.info("=== RETRIEVING AND SYNTHESIZING ===")
         
         topic = state["topic"]
         
         # Retrieve relevant chunks
-        print("Retrieving relevant context...")
+        logger.debug("Retrieving relevant context...")
         retrieved_chunks = self.rag.retrieve(topic, top_k=10)
-        print(f"Retrieved {len(retrieved_chunks)} relevant chunks")
+        logger.info(f"Retrieved {len(retrieved_chunks)} relevant chunks")
         
         # Format context
         context = self.rag.format_retrieved_context(retrieved_chunks)
@@ -328,7 +338,7 @@ Please write a comprehensive, well-organized research report (aim for 800-1500 w
 """
         
         # Generate synthesis
-        print("Generating synthesis...")
+        logger.debug("Generating synthesis...")
         messages = [
             SystemMessage(content="You are an expert research analyst who synthesizes information into clear, comprehensive reports."),
             HumanMessage(content=synthesis_prompt)
@@ -337,7 +347,7 @@ Please write a comprehensive, well-organized research report (aim for 800-1500 w
         response = self.llm.invoke(messages)
         synthesis = response.content
         
-        print(f"Synthesis completed ({len(synthesis)} characters)")
+        logger.info(f"Synthesis completed ({len(synthesis)} characters)")
         
         return {
             "retrieved_chunks": retrieved_chunks,
@@ -360,22 +370,26 @@ Please write a comprehensive, well-organized research report (aim for 800-1500 w
         """
         from agent.state import create_initial_state
         
-        print(f"\n{'='*60}")
-        print(f"STARTING AUTONOMOUS RESEARCH")
-        print(f"Topic: {topic}")
-        print(f"{'='*60}")
-        
         # Create initial state
         initial_state = create_initial_state(topic)
+        
+        # Set logging context for the entire research session
+        set_logging_context(request_id=initial_state["request_id"], topic=topic)
+        
+        logger.info("=" * 60)
+        logger.info("STARTING AUTONOMOUS RESEARCH")
+        logger.info(f"Topic: {topic}")
+        logger.info(f"Request ID: {initial_state['request_id']}")
+        logger.info("=" * 60)
         
         # Run the graph
         final_state = self.graph.invoke(initial_state)
         
-        print(f"\n{'='*60}")
-        print(f"RESEARCH COMPLETED")
-        print(f"Status: {final_state['status']}")
-        print(f"Steps taken: {final_state['step_count']}")
-        print(f"{'='*60}\n")
+        logger.info("=" * 60)
+        logger.info("RESEARCH COMPLETED")
+        logger.info(f"Status: {final_state['status']}")
+        logger.info(f"Steps taken: {final_state['step_count']}")
+        logger.info("=" * 60)
         
         return final_state
 

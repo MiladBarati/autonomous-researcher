@@ -8,7 +8,10 @@ For web UI, use: streamlit run app.py
 import sys
 import argparse
 from agent.graph import create_research_graph
+from agent.logger import get_logger, set_logging_context
 from config import Config
+
+logger = get_logger("main")
 
 
 def main():
@@ -32,37 +35,44 @@ def main():
     if args.web:
         # Launch Streamlit app
         import subprocess
-        print("Launching web interface...")
+        logger.info("Launching web interface...")
         subprocess.run(["streamlit", "run", "app.py"])
         return
     
     if not args.topic:
-        print("Autonomous Research Assistant")
-        print("=" * 60)
-        print("\nUsage:")
-        print("  python main.py '<research topic>'  - Run research via CLI")
-        print("  python main.py --web               - Launch web interface")
-        print("\nExample:")
-        print("  python main.py 'quantum computing applications'")
-        print("\nFor better experience, use the web interface:")
-        print("  streamlit run app.py")
-        print("=" * 60)
+        logger.info("Autonomous Research Assistant")
+        logger.info("=" * 60)
+        logger.info("\nUsage:")
+        logger.info("  python main.py '<research topic>'  - Run research via CLI")
+        logger.info("  python main.py --web               - Launch web interface")
+        logger.info("\nExample:")
+        logger.info("  python main.py 'quantum computing applications'")
+        logger.info("\nFor better experience, use the web interface:")
+        logger.info("  streamlit run app.py")
+        logger.info("=" * 60)
         sys.exit(1)
     
     try:
         # Validate configuration
         Config.validate()
         
-        print("\n" + "=" * 60)
-        print("Autonomous Research Assistant")
-        print("=" * 60)
-        print(f"\nTopic: {args.topic}\n")
+        # Set logging context
+        set_logging_context(topic=args.topic)
+        
+        logger.info("=" * 60)
+        logger.info("Autonomous Research Assistant")
+        logger.info("=" * 60)
+        logger.info(f"\nTopic: {args.topic}\n")
         
         # Create agent and run research
         agent = create_research_graph()
         final_state = agent.research(args.topic)
         
         # Display results
+        logger.info("=" * 60)
+        logger.info("RESEARCH REPORT")
+        logger.info("=" * 60)
+        # Print synthesis to console for user visibility
         print("\n" + "=" * 60)
         print("RESEARCH REPORT")
         print("=" * 60 + "\n")
@@ -75,10 +85,12 @@ def main():
             f.write(f"# Research Report: {args.topic}\n\n")
             f.write(final_state.get("synthesis", ""))
         
+        logger.info(f"Report saved to: {filename}")
         print(f"\nReport saved to: {filename}")
         print("=" * 60 + "\n")
         
     except Exception as e:
+        logger.error(f"Error during research: {e}", exc_info=True)
         print(f"\nError: {e}")
         sys.exit(1)
 

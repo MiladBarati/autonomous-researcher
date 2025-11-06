@@ -23,6 +23,9 @@ from langchain_core.tools import Tool
 from tavily import TavilyClient
 
 from config import Config
+from agent.logger import get_logger
+
+logger = get_logger("tools")
 
 
 class TavilySearchTool:
@@ -64,7 +67,7 @@ class TavilySearchTool:
             return results
         
         except Exception as e:
-            print(f"Tavily search error: {e}")
+            logger.error(f"Tavily search error: {e}", exc_info=True)
             return []
     
     def as_tool(self) -> Tool:
@@ -133,7 +136,7 @@ class WebScraperTool:
             }
         
         except Exception as e:
-            print(f"Scraping error for {url}: {e}")
+            logger.warning(f"Scraping error for {url}: {e}")
             return {
                 "url": url,
                 "title": "",
@@ -213,7 +216,7 @@ class ArxivSearchTool:
             return results
         
         except Exception as e:
-            print(f"ArXiv search error: {e}")
+            logger.error(f"ArXiv search error: {e}", exc_info=True)
             return []
     
     def as_tool(self) -> Tool:
@@ -261,7 +264,7 @@ class PDFProcessorTool:
             }
         
         except Exception as e:
-            print(f"PDF extraction error for {url}: {e}")
+            logger.warning(f"PDF extraction error for {url}: {e}")
             return {
                 "url": url,
                 "content": "",
