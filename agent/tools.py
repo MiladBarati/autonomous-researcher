@@ -31,8 +31,8 @@ logger = get_logger("tools")
 class TavilySearchTool:
     """Web search using Tavily API"""
     
-    def __init__(self):
-        self.client = TavilyClient(api_key=Config.TAVILY_API_KEY)
+    def __init__(self) -> None:
+        self.client: TavilyClient = TavilyClient(api_key=Config.TAVILY_API_KEY)
     
     def search(self, query: str, max_results: int = None) -> List[Dict[str, Any]]:
         """
@@ -46,15 +46,15 @@ class TavilySearchTool:
             List of search results with title, url, content, and score
         """
         try:
-            max_results = max_results or Config.MAX_SEARCH_RESULTS
-            response = self.client.search(
+            max_results: int = max_results or Config.MAX_SEARCH_RESULTS
+            response: Dict[str, Any] = self.client.search(
                 query=query,
                 max_results=max_results,
                 search_depth="advanced",
                 include_answer=True,
             )
             
-            results = []
+            results: List[Dict[str, Any]] = []
             for result in response.get("results", []):
                 results.append({
                     "title": result.get("title", ""),
@@ -82,8 +82,8 @@ class TavilySearchTool:
 class WebScraperTool:
     """Web content extraction using BeautifulSoup"""
     
-    def __init__(self):
-        self.headers = {
+    def __init__(self) -> None:
+        self.headers: Dict[str, str] = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         }
     
@@ -98,10 +98,10 @@ class WebScraperTool:
             Dictionary with url, title, content, and metadata
         """
         try:
-            response = requests.get(url, headers=self.headers, timeout=10)
+            response: requests.Response = requests.get(url, headers=self.headers, timeout=10)
             response.raise_for_status()
             
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup: BeautifulSoup = BeautifulSoup(response.content, 'html.parser')
             
             # Remove script and style elements
             for script in soup(["script", "style", "nav", "footer", "header"]):
@@ -109,7 +109,7 @@ class WebScraperTool:
             
             # Get title
             title = soup.find('title')
-            title_text = title.get_text().strip() if title else ""
+            title_text: str = title.get_text().strip() if title else ""
             
             # Get main content
             # Try to find main content area
@@ -118,9 +118,9 @@ class WebScraperTool:
             if main_content:
                 # Extract text from paragraphs
                 paragraphs = main_content.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
-                content = '\n\n'.join([p.get_text().strip() for p in paragraphs if p.get_text().strip()])
+                content: str = '\n\n'.join([p.get_text().strip() for p in paragraphs if p.get_text().strip()])
             else:
-                content = soup.get_text()
+                content: str = soup.get_text()
             
             # Clean up whitespace
             content = re.sub(r'\n\s*\n', '\n\n', content)
@@ -158,11 +158,11 @@ class WebScraperTool:
         Returns:
             List of scraped content dictionaries
         """
-        max_urls = max_urls or Config.MAX_SCRAPE_URLS
-        results = []
+        max_urls: int = max_urls or Config.MAX_SCRAPE_URLS
+        results: List[Dict[str, Any]] = []
         
         for url in urls[:max_urls]:
-            result = self.scrape(url)
+            result: Dict[str, Any] = self.scrape(url)
             if result["success"] and result["content"]:
                 results.append(result)
         
@@ -192,15 +192,15 @@ class ArxivSearchTool:
             List of paper metadata
         """
         try:
-            max_results = max_results or Config.MAX_ARXIV_RESULTS
+            max_results: int = max_results or Config.MAX_ARXIV_RESULTS
             
-            search = arxiv.Search(
+            search: arxiv.Search = arxiv.Search(
                 query=query,
                 max_results=max_results,
                 sort_by=arxiv.SortCriterion.Relevance
             )
             
-            results = []
+            results: List[Dict[str, Any]] = []
             for paper in search.results():
                 results.append({
                     "title": paper.title,
@@ -242,16 +242,16 @@ class PDFProcessorTool:
             Dictionary with extracted content
         """
         try:
-            headers = {
+            headers: Dict[str, str] = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             }
-            response = requests.get(url, headers=headers, timeout=30)
+            response: requests.Response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
             
-            pdf_file = io.BytesIO(response.content)
-            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            pdf_file: io.BytesIO = io.BytesIO(response.content)
+            pdf_reader: PyPDF2.PdfReader = PyPDF2.PdfReader(pdf_file)
             
-            text = ""
+            text: str = ""
             for page in pdf_reader.pages:
                 text += page.extract_text() + "\n"
             
@@ -284,10 +284,10 @@ class PDFProcessorTool:
         Returns:
             List of extracted content
         """
-        results = []
+        results: List[Dict[str, Any]] = []
         for paper in papers:
             if "pdf_url" in paper:
-                content = self.extract_from_url(paper["pdf_url"])
+                content: Dict[str, Any] = self.extract_from_url(paper["pdf_url"])
                 if content["success"]:
                     content["title"] = paper.get("title", "")
                     content["authors"] = paper.get("authors", [])
@@ -307,11 +307,11 @@ class PDFProcessorTool:
 class ToolManager:
     """Manager class to initialize and access all tools"""
     
-    def __init__(self):
-        self.tavily = TavilySearchTool()
-        self.scraper = WebScraperTool()
-        self.arxiv = ArxivSearchTool()
-        self.pdf_processor = PDFProcessorTool()
+    def __init__(self) -> None:
+        self.tavily: TavilySearchTool = TavilySearchTool()
+        self.scraper: WebScraperTool = WebScraperTool()
+        self.arxiv: ArxivSearchTool = ArxivSearchTool()
+        self.pdf_processor: PDFProcessorTool = PDFProcessorTool()
     
     def get_all_tools(self) -> List[Tool]:
         """Get all tools as LangChain Tool objects"""
@@ -324,8 +324,8 @@ class ToolManager:
     
     def get_tool_descriptions(self) -> str:
         """Get formatted descriptions of all available tools"""
-        tools = self.get_all_tools()
-        descriptions = []
+        tools: List[Tool] = self.get_all_tools()
+        descriptions: List[str] = []
         for tool in tools:
             descriptions.append(f"- {tool.name}: {tool.description}")
         return "\n".join(descriptions)

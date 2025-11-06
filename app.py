@@ -26,7 +26,7 @@ st.set_page_config(
 )
 
 
-def initialize_session_state():
+def initialize_session_state() -> None:
     """Initialize Streamlit session state variables"""
     if "research_results" not in st.session_state:
         st.session_state.research_results = None
@@ -36,7 +36,7 @@ def initialize_session_state():
         st.session_state.agent = None
 
 
-def display_header():
+def display_header() -> None:
     """Display application header"""
     st.title("🔬 Autonomous Research Assistant")
     st.markdown("""
@@ -49,7 +49,7 @@ def display_header():
     st.divider()
 
 
-def display_sidebar():
+def display_sidebar() -> None:
     """Display sidebar with settings and info"""
     with st.sidebar:
         st.header("⚙️ Configuration")
@@ -98,7 +98,10 @@ def display_sidebar():
             st.text("No research history yet")
 
 
-def display_research_input():
+from typing import Tuple
+
+
+def display_research_input() -> Tuple[str, bool]:
     """Display research topic input form"""
     st.header("🎯 Start New Research")
     
@@ -119,7 +122,7 @@ def display_research_input():
     return topic, start_button
 
 
-def display_progress_tracking(state: ResearchState):
+def display_progress_tracking(state: ResearchState) -> None:
     """Display real-time progress of research"""
     st.subheader("📊 Research Progress")
     
@@ -175,7 +178,7 @@ def display_progress_tracking(state: ResearchState):
                 st.text(stage_name)
 
 
-def display_research_results(state: ResearchState):
+def display_research_results(state: ResearchState) -> None:
     """Display research results with expandable sections"""
     st.header("📝 Research Results")
     
@@ -263,7 +266,10 @@ def display_research_results(state: ResearchState):
                     st.text(f"- {source}: {count}")
 
 
-def run_research(topic: str):
+from typing import Optional
+
+
+def run_research(topic: str) -> Optional[ResearchState]:
     """Execute research workflow"""
     try:
         # Validate configuration
@@ -297,7 +303,7 @@ def run_research(topic: str):
         return None
 
 
-def main():
+def main() -> None:
     """Main application entry point"""
     initialize_session_state()
     display_header()

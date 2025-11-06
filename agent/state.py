@@ -57,7 +57,7 @@ def create_initial_state(topic: str, request_id: Optional[str] = None) -> Resear
         Initial ResearchState
     """
     if request_id is None:
-        request_id = str(uuid.uuid4())
+        request_id: str = str(uuid.uuid4())
     
     return ResearchState(
         topic=topic,

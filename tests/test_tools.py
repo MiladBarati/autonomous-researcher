@@ -4,9 +4,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from agent.tools import TavilySearchTool, WebScraperTool, ArxivSearchTool, PDFProcessorTool
+from typing import List, Dict, Any
 
 
-def test_tavily_search_tool_returns_mapped_results(monkeypatch):
+def test_tavily_search_tool_returns_mapped_results(monkeypatch) -> None:
     tool = TavilySearchTool()
     fake_response = {
         "results": [
@@ -16,7 +17,7 @@ def test_tavily_search_tool_returns_mapped_results(monkeypatch):
     }
     tool.client.search = MagicMock(return_value=fake_response)
 
-    results = tool.search("query", max_results=2)
+    results: List[Dict[str, Any]] = tool.search("query", max_results=2)
 
     assert len(results) == 2
     assert results[0]["title"] == "A"
@@ -24,7 +25,7 @@ def test_tavily_search_tool_returns_mapped_results(monkeypatch):
     tool.client.search.assert_called_once()
 
 
-def test_web_scraper_scrape_parses_content(monkeypatch):
+def test_web_scraper_scrape_parses_content(monkeypatch) -> None:
     html = b"""
     <html>
       <head><title>Test Page</title></head>
@@ -58,18 +59,18 @@ def test_web_scraper_scrape_parses_content(monkeypatch):
     assert out["word_count"] > 0
 
 
-def test_web_scraper_scrape_multiple_respects_limit(monkeypatch):
+def test_web_scraper_scrape_multiple_respects_limit(monkeypatch) -> None:
     scraper = WebScraperTool()
     scraper.scrape = MagicMock(side_effect=lambda url: {"success": True, "content": "x"})
 
-    urls = [f"http://u{i}" for i in range(10)]
-    out = scraper.scrape_multiple(urls, max_urls=3)
+    urls: List[str] = [f"http://u{i}" for i in range(10)]
+    out: List[Dict[str, Any]] = scraper.scrape_multiple(urls, max_urls=3)
 
     assert len(out) == 3
     assert scraper.scrape.call_count == 3
 
 
-def test_arxiv_search_tool_maps_results(monkeypatch):
+def test_arxiv_search_tool_maps_results(monkeypatch) -> None:
     arxiv_tool = ArxivSearchTool()
 
     class FakePaper:
@@ -86,14 +87,14 @@ def test_arxiv_search_tool_maps_results(monkeypatch):
     fake_search.results = MagicMock(return_value=[FakePaper(1), FakePaper(2)])
 
     with patch("agent.tools.arxiv.Search", return_value=fake_search):
-        results = arxiv_tool.search("agent", max_results=2)
+        results: List[Dict[str, Any]] = arxiv_tool.search("agent", max_results=2)
 
     assert len(results) == 2
     assert results[0]["source"] == "arxiv"
     assert "authors" in results[0]
 
 
-def test_pdf_processor_extract_from_url(monkeypatch):
+def test_pdf_processor_extract_from_url(monkeypatch) -> None:
     pdf_bytes = b"%PDF-1.4\n%..."
 
     class Resp:

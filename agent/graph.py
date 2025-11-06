@@ -11,10 +11,11 @@ Defines the state graph with nodes for:
 - Retrieval and synthesis
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, END, CompiledGraph
+from langchain_groq import ChatGroq
 
 from agent.state import ResearchState
 from agent.tools import ToolManager
@@ -28,13 +29,13 @@ logger = get_logger("graph")
 class ResearchAgent:
     """Autonomous Research Agent using LangGraph"""
     
-    def __init__(self):
-        self.llm = get_llm()
-        self.tools = ToolManager()
-        self.rag = RAGPipeline()
-        self.graph = self._build_graph()
+    def __init__(self) -> None:
+        self.llm: ChatGroq = get_llm()
+        self.tools: ToolManager = ToolManager()
+        self.rag: RAGPipeline = RAGPipeline()
+        self.graph: CompiledGraph = self._build_graph()
     
-    def _build_graph(self) -> StateGraph:
+    def _build_graph(self) -> CompiledGraph:
         """Build the LangGraph state machine"""
         
         # Create state graph
@@ -76,10 +77,10 @@ class ResearchAgent:
         set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
         logger.info("=== PLANNING RESEARCH ===")
         
-        topic = state["topic"]
+        topic: str = state["topic"]
         
         # Create planning prompt
-        planning_prompt = f"""You are an autonomous research agent. Your task is to create a comprehensive research plan for the following topic:
+        planning_prompt: str = f"""You are an autonomous research agent. Your task is to create a comprehensive research plan for the following topic:
 
 Topic: {topic}
 
@@ -100,16 +101,16 @@ SEARCH QUERIES:
 """
         
         # Get LLM response
-        messages = [SystemMessage(content="You are a research planning expert."),
+        messages: List[SystemMessage | HumanMessage] = [SystemMessage(content="You are a research planning expert."),
                    HumanMessage(content=planning_prompt)]
         
         response = self.llm.invoke(messages)
-        plan_text = response.content
+        plan_text: str = response.content
         
         # Extract search queries from response
-        queries = []
-        lines = plan_text.split('\n')
-        in_queries_section = False
+        queries: List[str] = []
+        lines: List[str] = plan_text.split('\n')
+        in_queries_section: bool = False
         
         for line in lines:
             line = line.strip()
@@ -118,7 +119,7 @@ SEARCH QUERIES:
                 continue
             if in_queries_section and line and (line[0].isdigit() or line.startswith('-')):
                 # Extract query text, removing numbering
-                query = line.split('.', 1)[-1].strip() if '.' in line else line.lstrip('- ')
+                query: str = line.split('.', 1)[-1].strip() if '.' in line else line.lstrip('- ')
                 if query:
                     queries.append(query)
         
@@ -151,8 +152,8 @@ SEARCH QUERIES:
         set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
         logger.info("=== SEARCHING WEB ===")
         
-        queries = state["search_queries"]
-        all_results = []
+        queries: List[str] = state["search_queries"]
+        all_results: List[Dict[str, Any]] = []
         
         for i, query in enumerate(queries[:5], 1):  # Limit to 5 queries
             logger.debug(f"Query {i}/{len(queries[:5])}: {query}")
@@ -181,11 +182,11 @@ SEARCH QUERIES:
         set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
         logger.info("=== SCRAPING CONTENT ===")
         
-        search_results = state["search_results"]
-        urls = [result["url"] for result in search_results if result.get("url")]
+        search_results: List[Dict[str, Any]] = state["search_results"]
+        urls: List[str] = [result["url"] for result in search_results if result.get("url")]
         
         logger.info(f"Scraping {min(len(urls), Config.MAX_SCRAPE_URLS)} URLs...")
-        scraped = self.tools.scraper.scrape_multiple(urls, max_urls=Config.MAX_SCRAPE_URLS)
+        scraped: List[Dict[str, Any]] = self.tools.scraper.scrape_multiple(urls, max_urls=Config.MAX_SCRAPE_URLS)
         
         logger.info(f"Successfully scraped {len(scraped)} pages")
         
@@ -208,8 +209,8 @@ SEARCH QUERIES:
         set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
         logger.info("=== SEARCHING ARXIV ===")
         
-        topic = state["topic"]
-        papers = self.tools.arxiv.search(topic, max_results=Config.MAX_ARXIV_RESULTS)
+        topic: str = state["topic"]
+        papers: List[Dict[str, Any]] = self.tools.arxiv.search(topic, max_results=Config.MAX_ARXIV_RESULTS)
         
         logger.info(f"Found {len(papers)} ArXiv papers")
         
@@ -232,7 +233,7 @@ SEARCH QUERIES:
         set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
         logger.info("=== PROCESSING DOCUMENTS ===")
         
-        all_docs = []
+        all_docs: List[Dict[str, Any]] = []
         
         # Add scraped web content
         all_docs.extend(state["scraped_content"])
@@ -275,7 +276,7 @@ SEARCH QUERIES:
         set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
         logger.info("=== EMBEDDING AND STORING ===")
         
-        documents = state["all_documents"]
+        documents: List[Dict[str, Any]] = state["all_documents"]
         
         if not documents:
             logger.warning("No documents to store")
@@ -285,9 +286,9 @@ SEARCH QUERIES:
             }
         
         # Store documents in vector DB
-        chunk_count = self.rag.store_documents(documents)
+        chunk_count: int = self.rag.store_documents(documents)
         
-        stats = self.rag.get_collection_stats()
+        stats: Dict[str, Any] = self.rag.get_collection_stats()
         logger.info(f"Vector store stats: {stats}")
         
         return {
@@ -309,18 +310,18 @@ SEARCH QUERIES:
         set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
         logger.info("=== RETRIEVING AND SYNTHESIZING ===")
         
-        topic = state["topic"]
+        topic: str = state["topic"]
         
         # Retrieve relevant chunks
         logger.debug("Retrieving relevant context...")
-        retrieved_chunks = self.rag.retrieve(topic, top_k=10)
+        retrieved_chunks: List[Dict[str, Any]] = self.rag.retrieve(topic, top_k=10)
         logger.info(f"Retrieved {len(retrieved_chunks)} relevant chunks")
         
         # Format context
-        context = self.rag.format_retrieved_context(retrieved_chunks)
+        context: str = self.rag.format_retrieved_context(retrieved_chunks)
         
         # Create synthesis prompt
-        synthesis_prompt = f"""You are a research analyst tasked with synthesizing information on the following topic:
+        synthesis_prompt: str = f"""You are a research analyst tasked with synthesizing information on the following topic:
 
 Topic: {topic}
 
@@ -339,13 +340,13 @@ Please write a comprehensive, well-organized research report (aim for 800-1500 w
         
         # Generate synthesis
         logger.debug("Generating synthesis...")
-        messages = [
+        messages: List[SystemMessage | HumanMessage] = [
             SystemMessage(content="You are an expert research analyst who synthesizes information into clear, comprehensive reports."),
             HumanMessage(content=synthesis_prompt)
         ]
         
         response = self.llm.invoke(messages)
-        synthesis = response.content
+        synthesis: str = response.content
         
         logger.info(f"Synthesis completed ({len(synthesis)} characters)")
         
@@ -371,7 +372,7 @@ Please write a comprehensive, well-organized research report (aim for 800-1500 w
         from agent.state import create_initial_state
         
         # Create initial state
-        initial_state = create_initial_state(topic)
+        initial_state: ResearchState = create_initial_state(topic)
         
         # Set logging context for the entire research session
         set_logging_context(request_id=initial_state["request_id"], topic=topic)
@@ -383,7 +384,7 @@ Please write a comprehensive, well-organized research report (aim for 800-1500 w
         logger.info("=" * 60)
         
         # Run the graph
-        final_state = self.graph.invoke(initial_state)
+        final_state: ResearchState = self.graph.invoke(initial_state)
         
         logger.info("=" * 60)
         logger.info("RESEARCH COMPLETED")

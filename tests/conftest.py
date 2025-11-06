@@ -9,7 +9,10 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 # Provide minimal stubs for optional heavy/remote dependencies if not installed
-def _ensure_module(name, module_obj):
+from typing import Any
+
+
+def _ensure_module(name: str, module_obj: Any) -> None:
     if isinstance(module_obj, types.ModuleType):
         module = module_obj
     else:

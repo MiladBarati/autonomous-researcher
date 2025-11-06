@@ -14,7 +14,7 @@ from config import Config
 logger = get_logger("main")
 
 
-def main():
+def main() -> None:
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
         description="Autonomous Research Assistant - AI-powered research agent"

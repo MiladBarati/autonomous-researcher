@@ -31,10 +31,10 @@ class ContextualFormatter(logging.Formatter):
         record.topic = topic_var.get() or "N/A"
         
         # Format timestamp
-        record.timestamp = datetime.utcnow().isoformat()
+        record.timestamp: str = datetime.utcnow().isoformat()
         
         # Use structured format
-        log_data = {
+        log_data: Dict[str, Any] = {
             "timestamp": record.timestamp,
             "level": record.levelname,
             "logger": record.name,
@@ -75,16 +75,16 @@ class StructuredLogger:
     _instance: Optional['StructuredLogger'] = None
     _initialized: bool = False
     
-    def __new__(cls):
+    def __new__(cls) -> 'StructuredLogger':
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
     
-    def __init__(self):
+    def __init__(self) -> None:
         if self._initialized:
             return
         
-        self.logger = logging.getLogger("autonomous_research_assistant")
+        self.logger: logging.Logger = logging.getLogger("autonomous_research_assistant")
         self.logger.setLevel(logging.DEBUG)
         self.logger.propagate = False
         
@@ -92,9 +92,9 @@ class StructuredLogger:
         self.logger.handlers.clear()
         
         # Console handler with INFO level
-        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler: logging.StreamHandler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.INFO)
-        console_formatter = ConsoleFormatter(
+        console_formatter: ConsoleFormatter = ConsoleFormatter(
             '%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] [%(topic)s] - %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
         )
@@ -102,22 +102,22 @@ class StructuredLogger:
         self.logger.addHandler(console_handler)
         
         # File handler with DEBUG level (structured JSON)
-        log_dir = Path("logs")
+        log_dir: Path = Path("logs")
         log_dir.mkdir(exist_ok=True)
         
-        file_handler = logging.handlers.RotatingFileHandler(
+        file_handler: logging.handlers.RotatingFileHandler = logging.handlers.RotatingFileHandler(
             log_dir / "research_assistant.log",
             maxBytes=10 * 1024 * 1024,  # 10MB
             backupCount=5,
             encoding='utf-8'
         )
         file_handler.setLevel(logging.DEBUG)
-        file_formatter = ContextualFormatter()
+        file_formatter: ContextualFormatter = ContextualFormatter()
         file_handler.setFormatter(file_formatter)
         self.logger.addHandler(file_handler)
         
         # Error file handler (only ERROR and above)
-        error_handler = logging.handlers.RotatingFileHandler(
+        error_handler: logging.handlers.RotatingFileHandler = logging.handlers.RotatingFileHandler(
             log_dir / "research_assistant_errors.log",
             maxBytes=10 * 1024 * 1024,  # 10MB
             backupCount=5,
@@ -149,7 +149,7 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     return StructuredLogger().get_logger()
 
 
-def set_logging_context(request_id: Optional[str] = None, topic: Optional[str] = None):
+def set_logging_context(request_id: Optional[str] = None, topic: Optional[str] = None) -> None:
     """
     Set logging context (request_id and topic) for current execution.
     
@@ -163,7 +163,7 @@ def set_logging_context(request_id: Optional[str] = None, topic: Optional[str] =
         topic_var.set(topic)
 
 
-def clear_logging_context():
+def clear_logging_context() -> None:
     """Clear logging context"""
     request_id_var.set(None)
     topic_var.set(None)
@@ -183,5 +183,5 @@ def get_logging_context() -> Dict[str, Optional[str]]:
 
 
 # Initialize logger on import
-_logger = StructuredLogger()
+_logger: StructuredLogger = StructuredLogger()
 

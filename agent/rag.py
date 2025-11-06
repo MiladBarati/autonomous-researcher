@@ -7,11 +7,12 @@ using ChromaDB and sentence-transformers.
 
 import hashlib
 import uuid
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
 
 import chromadb
 from chromadb.config import Settings
+from chromadb import Collection
 from sentence_transformers import SentenceTransformer
 try:
     from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -35,17 +36,17 @@ class RAGPipeline:
     - Semantic retrieval
     """
     
-    def __init__(self, collection_name: Optional[str] = None):
+    def __init__(self, collection_name: Optional[str] = None) -> None:
         """
         Initialize RAG pipeline.
         
         Args:
             collection_name: Name for ChromaDB collection (default from config)
         """
-        self.collection_name = collection_name or Config.COLLECTION_NAME
+        self.collection_name: str = collection_name or Config.COLLECTION_NAME
         
         # Initialize text splitter
-        self.text_splitter = RecursiveCharacterTextSplitter(
+        self.text_splitter: RecursiveCharacterTextSplitter = RecursiveCharacterTextSplitter(
             chunk_size=Config.CHUNK_SIZE,
             chunk_overlap=Config.CHUNK_OVERLAP,
             length_function=len,
@@ -54,10 +55,10 @@ class RAGPipeline:
         
         # Initialize embedding model
         logger.info(f"Loading embedding model: {Config.EMBEDDING_MODEL}")
-        self.embedding_model = SentenceTransformer(Config.EMBEDDING_MODEL)
+        self.embedding_model: SentenceTransformer = SentenceTransformer(Config.EMBEDDING_MODEL)
         
         # Initialize ChromaDB client
-        self.client = chromadb.PersistentClient(
+        self.client: chromadb.PersistentClient = chromadb.PersistentClient(
             path=Config.CHROMA_PERSIST_DIR,
             settings=Settings(
                 anonymized_telemetry=False,
@@ -66,9 +67,9 @@ class RAGPipeline:
         )
         
         # Create or get collection
-        self.collection = self._get_or_create_collection()
+        self.collection: Collection = self._get_or_create_collection()
     
-    def _get_or_create_collection(self):
+    def _get_or_create_collection(self) -> Collection:
         """Get existing collection or create new one"""
         try:
             collection = self.client.get_collection(name=self.collection_name)
@@ -92,23 +93,23 @@ class RAGPipeline:
         Returns:
             List of chunk dictionaries with metadata
         """
-        chunks = []
+        chunks: List[Dict[str, Any]] = []
         
         for doc in documents:
-            content = doc.get("content", "")
+            content: str = doc.get("content", "")
             if not content:
                 continue
             
             # Split into chunks
-            text_chunks = self.text_splitter.split_text(content)
+            text_chunks: List[str] = self.text_splitter.split_text(content)
             
             # Create chunk metadata
             for i, chunk_text in enumerate(text_chunks):
-                chunk_id = hashlib.md5(
+                chunk_id: str = hashlib.md5(
                     f"{doc.get('url', '')}{i}{chunk_text[:100]}".encode()
                 ).hexdigest()
                 
-                chunk = {
+                chunk: Dict[str, Any] = {
                     "id": chunk_id,
                     "text": chunk_text,
                     "chunk_index": i,
@@ -138,7 +139,7 @@ class RAGPipeline:
         Returns:
             List of embedding vectors
         """
-        texts = [chunk["text"] for chunk in chunks]
+        texts: List[str] = [chunk["text"] for chunk in chunks]
         embeddings = self.embedding_model.encode(
             texts,
             show_progress_bar=False,
@@ -161,7 +162,7 @@ class RAGPipeline:
         
         # Chunk documents
         logger.debug(f"Chunking {len(documents)} documents...")
-        chunks = self.chunk_documents(documents)
+        chunks: List[Dict[str, Any]] = self.chunk_documents(documents)
         
         if not chunks:
             return 0
@@ -170,15 +171,15 @@ class RAGPipeline:
         
         # Generate embeddings
         logger.debug("Generating embeddings...")
-        embeddings = self.embed_chunks(chunks)
+        embeddings: List[List[float]] = self.embed_chunks(chunks)
         
         # Prepare data for ChromaDB
-        ids = [chunk["id"] for chunk in chunks]
-        texts = [chunk["text"] for chunk in chunks]
-        metadatas = []
+        ids: List[str] = [chunk["id"] for chunk in chunks]
+        texts: List[str] = [chunk["text"] for chunk in chunks]
+        metadatas: List[Dict[str, Any]] = []
         
         for chunk in chunks:
-            metadata = {k: v for k, v in chunk.items() if k not in ["id", "text"]}
+            metadata: Dict[str, Any] = {k: v for k, v in chunk.items() if k not in ["id", "text"]}
             # ChromaDB requires all metadata values to be strings, ints, floats, or bools
             metadata = {k: str(v) if not isinstance(v, (str, int, float, bool)) else v 
                        for k, v in metadata.items()}
@@ -207,27 +208,27 @@ class RAGPipeline:
         Returns:
             List of relevant chunks with metadata
         """
-        top_k = top_k or Config.TOP_K_RESULTS
+        top_k: int = top_k or Config.TOP_K_RESULTS
         
         # Generate query embedding
-        query_embedding = self.embedding_model.encode(
+        query_embedding: List[float] = self.embedding_model.encode(
             [query],
             show_progress_bar=False,
             convert_to_numpy=True
         ).tolist()[0]
         
         # Query ChromaDB
-        results = self.collection.query(
+        results: Dict[str, Any] = self.collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
             include=["documents", "metadatas", "distances"]
         )
         
         # Format results
-        retrieved_chunks = []
+        retrieved_chunks: List[Dict[str, Any]] = []
         if results["ids"] and len(results["ids"]) > 0:
             for i in range(len(results["ids"][0])):
-                chunk = {
+                chunk: Dict[str, Any] = {
                     "text": results["documents"][0][i],
                     "metadata": results["metadatas"][0][i],
                     "similarity_score": 1 - results["distances"][0][i],  # Convert distance to similarity
@@ -239,14 +240,14 @@ class RAGPipeline:
     
     def get_collection_stats(self) -> Dict[str, Any]:
         """Get statistics about the collection"""
-        count = self.collection.count()
+        count: int = self.collection.count()
         return {
             "collection_name": self.collection_name,
             "document_count": count,
             "persist_directory": Config.CHROMA_PERSIST_DIR
         }
     
-    def clear_collection(self):
+    def clear_collection(self) -> None:
         """Clear all documents from the collection"""
         try:
             self.client.delete_collection(name=self.collection_name)
@@ -268,11 +269,11 @@ class RAGPipeline:
         if not chunks:
             return "No relevant context found."
         
-        context_parts = []
+        context_parts: List[str] = []
         for i, chunk in enumerate(chunks, 1):
-            metadata = chunk.get("metadata", {})
-            source = metadata.get("title", metadata.get("url", "Unknown source"))
-            text = chunk["text"]
+            metadata: Dict[str, Any] = chunk.get("metadata", {})
+            source: str = metadata.get("title", metadata.get("url", "Unknown source"))
+            text: str = chunk["text"]
             
             context_parts.append(
                 f"[Source {i}: {source}]\n{text}\n"

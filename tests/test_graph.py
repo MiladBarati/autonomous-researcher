@@ -5,11 +5,14 @@ import pytest
 from agent.graph import ResearchAgent
 
 
-class DummyLLM:
-    def __init__(self, content):
-        self._content = content
+from typing import Any, List
 
-    def invoke(self, messages):
+
+class DummyLLM:
+    def __init__(self, content: str):
+        self._content: str = content
+
+    def invoke(self, messages: List[Any]) -> Any:
         return type("Resp", (), {"content": self._content})
 
 
@@ -69,5 +72,6 @@ def test_full_graph_flow_completes(agent_with_stubs):
     assert "SYNTHESIS TEXT" in final_state["synthesis"]
     # Steps: plan, search_web, scrape, arxiv, process, store, retrieve = 7
     assert final_state["step_count"] >= 7
+
 
 
