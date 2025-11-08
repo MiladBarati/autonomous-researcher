@@ -43,3 +43,7 @@ Thumbs.db
 
 # Streamlit
 .streamlit/
+
+# Sphinx documentation
+docs/_build/
+docs/_static/.doctrees/
