@@ -1,17 +1,12 @@
 """Tests for main.py module"""
 
-import sys
 from unittest.mock import MagicMock, patch
-
-import pytest
-
-from agent.validation import ValidationError
 
 
 def test_main_without_topic() -> None:
     """Test main() without topic argument"""
     with (
-        patch("main.logger") as mock_logger,
+        patch("main.logger"),
         patch("sys.exit") as mock_exit,
         patch("main.argparse.ArgumentParser") as MockParser,
     ):
@@ -31,13 +26,12 @@ def test_main_without_topic() -> None:
 
 def test_main_with_invalid_topic() -> None:
     """Test main() with invalid topic"""
-    import subprocess
 
     with (
-        patch("main.logger") as mock_logger,
+        patch("main.logger"),
         patch("sys.exit") as mock_exit,
         patch("main.argparse.ArgumentParser") as MockParser,
-        patch("subprocess.run") as mock_run,
+        patch("subprocess.run"),
     ):
         mock_parser = MagicMock()
         mock_args = MagicMock()
@@ -57,7 +51,7 @@ def test_main_with_web_flag() -> None:
     with (
         patch("main.logger"),
         patch("main.subprocess.run") as mock_run,
-        patch("main.argparse.ArgumentParser") as MockParser,
+        patch("main.argparse.ArgumentParser"),
     ):
         mock_parser = MagicMock()
         mock_args = MagicMock()
@@ -78,7 +72,7 @@ def test_main_with_valid_topic() -> None:
         patch("main.Config.validate", return_value=True),
         patch("main.create_research_graph") as mock_create,
         patch("main.set_logging_context"),
-        patch("builtins.open", create=True) as mock_open,
+        patch("builtins.open", create=True),
         patch("main.validate_topic", return_value="Test Topic"),
     ):
         mock_agent = MagicMock()
@@ -88,7 +82,6 @@ def test_main_with_valid_topic() -> None:
         }
         mock_create.return_value = mock_agent
 
-        mock_parser = MagicMock()
         mock_args = MagicMock()
         mock_args.topic = "Test Topic"
         mock_args.web = False
@@ -104,13 +97,12 @@ def test_main_with_valid_topic() -> None:
 
 def test_main_handles_exception() -> None:
     """Test main() handles exceptions gracefully"""
-    import subprocess
 
     with (
-        patch("main.logger") as mock_logger,
+        patch("main.logger"),
         patch("sys.exit") as mock_exit,
         patch("main.argparse.ArgumentParser") as MockParser,
-        patch("subprocess.run") as mock_run,
+        patch("subprocess.run"),
     ):
         mock_parser = MagicMock()
         mock_args = MagicMock()
@@ -124,4 +116,3 @@ def test_main_handles_exception() -> None:
 
             main()
             mock_exit.assert_called_once_with(1)
-

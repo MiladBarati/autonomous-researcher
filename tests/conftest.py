@@ -342,7 +342,7 @@ if "bs4" not in sys.modules and importlib.util.find_spec("bs4") is None:
             if name == "title":
                 return _Tag("Stub Title")
             if name in ("main", "article", "body"):
-                return self
+                return _Tag("Stub Content")
             return None
 
         def find_all(self, _names: Any) -> list[_Tag]:

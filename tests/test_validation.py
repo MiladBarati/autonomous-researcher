@@ -200,7 +200,7 @@ def test_validate_urls_max_urls() -> None:
 def test_validate_urls_not_list() -> None:
     """Test that validate_urls raises error for non-list input"""
     with pytest.raises(ValidationError, match="must be a list"):
-        validate_urls("not a list")
+        validate_urls("not a list")  # type: ignore[arg-type]
 
 
 def test_sanitize_text_basic() -> None:
@@ -339,7 +339,7 @@ def test_validate_state_data_success() -> None:
 def test_validate_state_data_not_dict() -> None:
     """Test that validate_state_data raises error for non-dict input"""
     with pytest.raises(ValidationError, match="must be a dictionary"):
-        validate_state_data("not a dict")
+        validate_state_data("not a dict")  # type: ignore[arg-type]
 
 
 def test_validate_state_data_validates_topic() -> None:
@@ -388,4 +388,3 @@ def test_validation_error_inheritance() -> None:
     error = ValidationError("test error")
     assert isinstance(error, Exception)
     assert str(error) == "test error"
-

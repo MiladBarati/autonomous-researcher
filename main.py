@@ -84,6 +84,7 @@ def main() -> None:
 
         # Save to file
         from agent.validation import sanitize_filename
+
         safe_topic = sanitize_filename(topic[:30].replace(" ", "_"))
         filename = f"research_report_{safe_topic}.md"
         with open(filename, "w", encoding="utf-8") as f:

@@ -3,8 +3,6 @@
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from agent.validation import ValidationError
 
 # Mock streamlit before importing app
@@ -20,7 +18,7 @@ def test_initialize_session_state() -> None:
     mock_session_state.research_results = None
     mock_session_state.research_history = []
     mock_session_state.agent = None
-    
+
     with patch("app.st.session_state", mock_session_state):
         from app import initialize_session_state
 
@@ -46,7 +44,7 @@ def test_display_header() -> None:
 def test_display_sidebar() -> None:
     """Test display_sidebar"""
     with (
-        patch("app.st.sidebar") as mock_sidebar,
+        patch("app.st.sidebar"),
         patch("app.st.session_state", {"research_history": []}),
         patch("app.Config") as MockConfig,
     ):
@@ -69,7 +67,7 @@ def test_display_sidebar() -> None:
 def test_display_research_input() -> None:
     """Test display_research_input"""
     with (
-        patch("app.st.header") as mock_header,
+        patch("app.st.header"),
         patch("app.st.columns") as mock_columns,
         patch("app.st.text_input") as mock_text_input,
         patch("app.st.button") as mock_button,
@@ -89,17 +87,32 @@ def test_display_research_input() -> None:
 
 def test_display_progress_tracking() -> None:
     """Test display_progress_tracking"""
-    state = {
+    from agent.state import ResearchState
+
+    state: ResearchState = {
+        "topic": "Test Topic",
+        "request_id": "test-id",
         "status": "planned",
         "step_count": 1,
+        "research_plan": None,
+        "search_queries": [],
+        "search_results": [],
+        "scraped_content": [],
+        "arxiv_papers": [],
+        "pdf_content": [],
+        "all_documents": [],
+        "vector_store_id": None,
+        "retrieved_chunks": [],
+        "synthesis": None,
+        "messages": [],
     }
 
     with (
-        patch("app.st.subheader") as mock_subheader,
+        patch("app.st.subheader"),
         patch("app.st.progress") as mock_progress,
         patch("app.st.columns") as mock_columns,
-        patch("app.st.metric") as mock_metric,
-        patch("app.st.markdown") as mock_markdown,
+        patch("app.st.metric"),
+        patch("app.st.markdown"),
     ):
         mock_columns.return_value = [MagicMock(), MagicMock(), MagicMock()]
 
@@ -111,23 +124,32 @@ def test_display_progress_tracking() -> None:
 
 def test_display_research_results() -> None:
     """Test display_research_results"""
-    state = {
+    from agent.state import ResearchState
+
+    state: ResearchState = {
         "synthesis": "Test synthesis",
         "topic": "Test Topic",
+        "request_id": "test-id",
         "research_plan": "Test plan",
+        "search_queries": [],
         "search_results": [{"title": "Result", "url": "http://test.com", "score": 0.9}],
         "scraped_content": [{"title": "Content", "url": "http://test.com", "word_count": 100}],
         "arxiv_papers": [{"title": "Paper", "authors": ["Author"], "published": "2024-01-01"}],
-        "retrieved_chunks": [{"text": "Chunk", "metadata": {"title": "Source"}}],
+        "pdf_content": [],
         "all_documents": [{"source": "web"}],
+        "vector_store_id": None,
+        "retrieved_chunks": [{"text": "Chunk", "metadata": {"title": "Source"}}],
+        "messages": [],
+        "step_count": 1,
+        "status": "completed",
     }
 
     with (
         patch("app.st.header") as mock_header,
-        patch("app.st.subheader") as mock_subheader,
-        patch("app.st.markdown") as mock_markdown,
-        patch("app.st.download_button") as mock_download,
-        patch("app.st.divider") as mock_divider,
+        patch("app.st.subheader"),
+        patch("app.st.markdown"),
+        patch("app.st.download_button"),
+        patch("app.st.divider"),
         patch("app.st.columns") as mock_columns,
         patch("app.st.expander") as mock_expander,
         patch("app.datetime") as mock_datetime,
@@ -185,7 +207,7 @@ def test_run_research_exception() -> None:
     """Test run_research handles exceptions"""
     with (
         patch("app.st.error") as mock_error,
-        patch("app.st.exception") as mock_exception,
+        patch("app.st.exception"),
         patch("app.validate_topic", side_effect=Exception("Test error")),
     ):
         from app import run_research
@@ -203,8 +225,8 @@ def test_main() -> None:
         patch("app.display_sidebar") as mock_sidebar,
         patch("app.display_research_input", return_value=("", False)) as mock_input,
         patch("app.st.session_state", {"research_results": None}),
-        patch("app.st.divider") as mock_divider,
-        patch("app.st.markdown") as mock_markdown,
+        patch("app.st.divider"),
+        patch("app.st.markdown"),
     ):
         from app import main
 

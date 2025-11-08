@@ -443,7 +443,7 @@ def test_tool_manager_get_tool_descriptions() -> None:
 def test_tavily_search_tool_handles_invalid_query() -> None:
     """Test that TavilySearchTool handles invalid query"""
     tool = TavilySearchTool()
-    
+
     # Empty query should trigger validation error
     results: list[dict[str, Any]] = tool.search("")
     assert results == []
@@ -452,7 +452,7 @@ def test_tavily_search_tool_handles_invalid_query() -> None:
 def test_web_scraper_handles_invalid_url() -> None:
     """Test that WebScraperTool handles invalid URL"""
     scraper = WebScraperTool()
-    
+
     # Invalid URL should trigger validation error
     out = scraper.scrape("javascript:alert('xss')")
     assert out["success"] is False
@@ -481,11 +481,11 @@ def test_web_scraper_handles_missing_main_content() -> None:
 def test_web_scraper_scrape_multiple_handles_invalid_urls() -> None:
     """Test that scrape_multiple handles invalid URLs"""
     scraper = WebScraperTool()
-    
+
     # Mix of valid and invalid URLs
     urls: list[str] = ["https://example.com", "javascript:alert('xss')", "https://test.com"]
     out: list[dict[str, Any]] = scraper.scrape_multiple(urls)
-    
+
     # Should only process valid URLs
     assert len(out) <= 2
 
@@ -493,7 +493,7 @@ def test_web_scraper_scrape_multiple_handles_invalid_urls() -> None:
 def test_arxiv_search_tool_handles_invalid_query() -> None:
     """Test that ArxivSearchTool handles invalid query"""
     arxiv_tool = ArxivSearchTool()
-    
+
     # Empty query should trigger validation error
     results: list[dict[str, Any]] = arxiv_tool.search("")
     assert results == []
@@ -502,7 +502,7 @@ def test_arxiv_search_tool_handles_invalid_query() -> None:
 def test_pdf_processor_handles_invalid_url() -> None:
     """Test that PDFProcessorTool handles invalid URL"""
     pdf_tool = PDFProcessorTool()
-    
+
     # Invalid URL should trigger validation error
     out = pdf_tool.extract_from_url("javascript:alert('xss')")
     assert out["success"] is False

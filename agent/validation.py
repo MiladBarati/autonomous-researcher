@@ -9,8 +9,8 @@ Provides functions for validating and sanitizing user inputs to prevent:
 """
 
 import re
+from typing import Any, cast
 from urllib.parse import urlparse, urlunparse
-from typing import Any
 
 from agent.logger import get_logger
 
@@ -49,7 +49,7 @@ ALLOWED_URL_SCHEMES = {"http", "https"}
 INVALID_FILENAME_CHARS = r'[<>:"/\\|?*\x00-\x1f]'
 
 
-def sanitize_text(text: str, max_length: int | None = None, allow_newlines: bool = True) -> str:
+def sanitize_text(text: Any, max_length: int | None = None, allow_newlines: bool = True) -> str:
     """
     Sanitize text input by removing dangerous patterns and normalizing whitespace.
 
@@ -63,6 +63,9 @@ def sanitize_text(text: str, max_length: int | None = None, allow_newlines: bool
     """
     if not isinstance(text, str):
         text = str(text)
+
+    # Type narrowing: text is now definitely a str
+    text = cast(str, text)
 
     # Remove null bytes
     text = text.replace("\x00", "")
@@ -89,10 +92,10 @@ def sanitize_text(text: str, max_length: int | None = None, allow_newlines: bool
         text = text[:max_length]
         logger.warning(f"Text truncated to {max_length} characters")
 
-    return text
+    return cast(str, text)
 
 
-def validate_topic(topic: str) -> str:
+def validate_topic(topic: Any) -> str:
     """
     Validate and sanitize research topic.
 
@@ -132,7 +135,7 @@ def validate_topic(topic: str) -> str:
     return sanitized
 
 
-def validate_query(query: str) -> str:
+def validate_query(query: Any) -> str:
     """
     Validate and sanitize search query.
 
@@ -165,7 +168,7 @@ def validate_query(query: str) -> str:
     return sanitized
 
 
-def validate_url(url: str, allowed_schemes: set[str] | None = None) -> str:
+def validate_url(url: Any, allowed_schemes: set[str] | None = None) -> str:
     """
     Validate and sanitize URL.
 
@@ -220,7 +223,7 @@ def validate_url(url: str, allowed_schemes: set[str] | None = None) -> str:
             raise ValidationError(f"URL contains dangerous pattern: {pattern}")
 
     # Reconstruct URL to normalize it
-    normalized = urlunparse(
+    normalized: str = urlunparse(
         (
             parsed.scheme.lower(),
             parsed.netloc.lower(),
@@ -267,7 +270,7 @@ def validate_urls(urls: list[str], max_urls: int | None = None) -> list[str]:
     return validated_urls
 
 
-def sanitize_filename(filename: str, max_length: int | None = None) -> str:
+def sanitize_filename(filename: Any, max_length: int | None = None) -> str:
     """
     Sanitize filename by removing invalid characters.
 
@@ -359,7 +362,7 @@ def validate_state_data(data: dict[str, Any]) -> dict[str, Any]:
     return validated
 
 
-def sanitize_for_display(text: str, max_length: int = 1000) -> str:
+def sanitize_for_display(text: Any, max_length: int = 1000) -> str:
     """
     Sanitize text for safe display in HTML/UI.
 
@@ -376,6 +379,9 @@ def sanitize_for_display(text: str, max_length: int = 1000) -> str:
     if not isinstance(text, str):
         text = str(text)
 
+    # Type narrowing: text is now definitely a str
+    text = cast(str, text)
+
     # Remove null bytes
     text = text.replace("\x00", "")
 
@@ -387,5 +393,4 @@ def sanitize_for_display(text: str, max_length: int = 1000) -> str:
     if len(text) > max_length:
         text = text[:max_length] + "..."
 
-    return text
-
+    return cast(str, text)

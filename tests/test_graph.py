@@ -185,7 +185,7 @@ def test_search_arxiv_handles_empty_topic(agent_with_stubs: Any) -> None:
     # Empty topic should raise ValidationError when creating state
     with pytest.raises(ValidationError):
         create_initial_state("")
-    
+
     # Test with a valid but minimal topic instead
     state = create_initial_state("test")
     # Mock validation to pass but return empty results
@@ -278,7 +278,7 @@ def test_plan_research_handles_invalid_topic(agent_with_stubs: Any) -> None:
     state = create_initial_state("test")
     # Manually set invalid topic to trigger validation error in plan_research
     state["topic"] = "ab"  # Too short
-    
+
     with pytest.raises(ValidationError):
         agent_with_stubs.plan_research(state)
 
