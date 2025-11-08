@@ -1,0 +1,32 @@
+services:
+  research-assistant:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: autonomous-research-assistant
+    ports:
+      - "8501:8501"
+    volumes:
+      # Persist ChromaDB data
+      - ./chroma_db:/app/chroma_db
+      # Persist logs
+      - ./logs:/app/logs
+      # Mount .env file (optional - can also use environment section)
+      - ./.env:/app/.env:ro
+    environment:
+      # API Keys (can be set here or in .env file)
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      # Optional: LangChain/LangSmith
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-true}
+      - LANGSMITH_ENDPOINT=${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-GenAIAppWithOpenAI}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost', 8501)); s.close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

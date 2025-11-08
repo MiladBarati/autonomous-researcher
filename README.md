@@ -101,6 +101,70 @@ LANGSMITH_PROJECT=your_project_name
 - Tavily: https://tavily.com/
 - LangSmith (optional): https://smith.langchain.com/
 
+## Docker Installation (Alternative)
+
+### Prerequisites
+- Docker and Docker Compose installed on your system
+- `.env` file with your API keys (see above)
+
+### Quick Start with Docker Compose
+
+1. **Ensure your `.env` file is configured** with your API keys
+
+2. **Build and run the container:**
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Access the web interface:**
+   Open your browser to `http://localhost:8501`
+
+4. **View logs:**
+   ```bash
+   docker-compose logs -f
+   ```
+
+5. **Stop the container:**
+   ```bash
+   docker-compose down
+   ```
+
+### Using Docker Directly
+
+1. **Build the Docker image:**
+   ```bash
+   docker build -t autonomous-research-assistant .
+   ```
+
+2. **Run the container:**
+   ```bash
+   docker run -d \
+     --name research-assistant \
+     -p 8501:8501 \
+     -v $(pwd)/chroma_db:/app/chroma_db \
+     -v $(pwd)/logs:/app/logs \
+     --env-file .env \
+     autonomous-research-assistant
+   ```
+
+3. **Access the web interface:**
+   Open your browser to `http://localhost:8501`
+
+### Docker Features
+
+- **Persistent Storage**: ChromaDB data and logs are persisted in volumes
+- **Environment Variables**: Automatically loaded from `.env` file
+- **Health Checks**: Built-in health monitoring
+- **Auto-restart**: Container automatically restarts on failure
+
+### Docker Compose Configuration
+
+The `docker-compose.yml` file includes:
+- Port mapping (8501 for Streamlit)
+- Volume mounts for data persistence
+- Environment variable configuration
+- Health checks and auto-restart policies
+
 ## Usage
 
 ### Web Interface (Recommended)
