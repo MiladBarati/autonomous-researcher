@@ -95,9 +95,26 @@ def main() -> None:
         print(f"\nReport saved to: {filename}")
         print("=" * 60 + "\n")
 
+    except ValidationError as e:
+        logger.error(f"Validation error: {e}")
+        print(f"\nError: Invalid input - {e}")
+        sys.exit(1)
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        print(f"\nError: Configuration issue - {e}")
+        print("Please check your .env file and ensure all required API keys are set.")
+        sys.exit(1)
+    except (FileNotFoundError, PermissionError, OSError) as e:
+        logger.error(f"File system error: {e}", exc_info=True)
+        print(f"\nError: File operation failed - {e}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        logger.info("Research interrupted by user")
+        print("\n\nResearch interrupted by user.")
+        sys.exit(130)
     except Exception as e:
-        logger.error(f"Error during research: {e}", exc_info=True)
-        print(f"\nError: {e}")
+        logger.error(f"Unexpected error during research: {e}", exc_info=True)
+        print(f"\nError: An unexpected error occurred - {e}")
         sys.exit(1)
 
 

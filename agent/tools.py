@@ -75,8 +75,17 @@ class TavilySearchTool:
 
             return results
 
+        except requests.RequestException as e:
+            logger.error(f"Tavily API network error: {e}", exc_info=True)
+            return []
+        except KeyError as e:
+            logger.error(f"Tavily API response format error: {e}", exc_info=True)
+            return []
+        except ValueError as e:
+            logger.error(f"Tavily API validation error: {e}", exc_info=True)
+            return []
         except Exception as e:
-            logger.error(f"Tavily search error: {e}", exc_info=True)
+            logger.error(f"Tavily search unexpected error: {e}", exc_info=True)
             return []
 
     def as_tool(self) -> Tool:
@@ -162,8 +171,41 @@ class WebScraperTool:
                 "success": True,
             }
 
+        except requests.Timeout as e:
+            logger.error(f"Request timeout for {url}: {e}")
+            return {
+                "url": url,
+                "title": "",
+                "content": "",
+                "word_count": 0,
+                "source": "web_scrape",
+                "success": False,
+                "error": f"Timeout: {str(e)}",
+            }
+        except requests.ConnectionError as e:
+            logger.error(f"Connection error for {url}: {e}")
+            return {
+                "url": url,
+                "title": "",
+                "content": "",
+                "word_count": 0,
+                "source": "web_scrape",
+                "success": False,
+                "error": f"Connection error: {str(e)}",
+            }
+        except requests.HTTPError as e:
+            logger.error(f"HTTP error for {url}: {e}")
+            return {
+                "url": url,
+                "title": "",
+                "content": "",
+                "word_count": 0,
+                "source": "web_scrape",
+                "success": False,
+                "error": f"HTTP {e.response.status_code if hasattr(e, 'response') else 'error'}: {str(e)}",
+            }
         except requests.RequestException as e:
-            logger.error(f"Network error: {e}")
+            logger.error(f"Network error for {url}: {e}")
             return {
                 "url": url,
                 "title": "",
@@ -173,8 +215,8 @@ class WebScraperTool:
                 "success": False,
                 "error": str(e),
             }
-        except ValueError as e:
-            logger.error(f"Invalid input: {e}")
+        except (ValueError, TypeError) as e:
+            logger.error(f"Invalid input for {url}: {e}")
             return {
                 "url": url,
                 "title": "",
@@ -183,9 +225,20 @@ class WebScraperTool:
                 "source": "web_scrape",
                 "success": False,
                 "error": str(e),
+            }
+        except AttributeError as e:
+            logger.warning(f"HTML parsing error for {url}: {e}")
+            return {
+                "url": url,
+                "title": "",
+                "content": "",
+                "word_count": 0,
+                "source": "web_scrape",
+                "success": False,
+                "error": f"Parsing error: {str(e)}",
             }
         except Exception as e:
-            logger.warning(f"Scraping error for {url}: {e}")
+            logger.warning(f"Unexpected scraping error for {url}: {e}")
             return {
                 "url": url,
                 "title": "",
@@ -278,8 +331,20 @@ class ArxivSearchTool:
 
             return results
 
+        except arxiv.UnexpectedEmptyPageError as e:
+            logger.error(f"ArXiv search returned empty page: {e}", exc_info=True)
+            return []
+        except arxiv.HTTPError as e:
+            logger.error(f"ArXiv API HTTP error: {e}", exc_info=True)
+            return []
+        except requests.RequestException as e:
+            logger.error(f"ArXiv API network error: {e}", exc_info=True)
+            return []
+        except ValueError as e:
+            logger.error(f"ArXiv search validation error: {e}", exc_info=True)
+            return []
         except Exception as e:
-            logger.error(f"ArXiv search error: {e}", exc_info=True)
+            logger.error(f"ArXiv search unexpected error: {e}", exc_info=True)
             return []
 
     def as_tool(self) -> Tool:
@@ -340,8 +405,38 @@ class PDFProcessorTool:
                 "success": True,
             }
 
+        except requests.Timeout as e:
+            logger.error(f"PDF download timeout for {url}: {e}")
+            return {
+                "url": url,
+                "content": "",
+                "page_count": 0,
+                "source": "pdf",
+                "success": False,
+                "error": f"Timeout: {str(e)}",
+            }
+        except requests.ConnectionError as e:
+            logger.error(f"PDF download connection error for {url}: {e}")
+            return {
+                "url": url,
+                "content": "",
+                "page_count": 0,
+                "source": "pdf",
+                "success": False,
+                "error": f"Connection error: {str(e)}",
+            }
+        except requests.HTTPError as e:
+            logger.error(f"PDF download HTTP error for {url}: {e}")
+            return {
+                "url": url,
+                "content": "",
+                "page_count": 0,
+                "source": "pdf",
+                "success": False,
+                "error": f"HTTP {e.response.status_code if hasattr(e, 'response') else 'error'}: {str(e)}",
+            }
         except requests.RequestException as e:
-            logger.error(f"Network error: {e}")
+            logger.error(f"PDF download network error for {url}: {e}")
             return {
                 "url": url,
                 "content": "",
@@ -350,8 +445,8 @@ class PDFProcessorTool:
                 "success": False,
                 "error": str(e),
             }
-        except ValueError as e:
-            logger.error(f"Invalid input: {e}")
+        except (ValueError, TypeError) as e:
+            logger.error(f"Invalid input for PDF {url}: {e}")
             return {
                 "url": url,
                 "content": "",
@@ -360,15 +455,28 @@ class PDFProcessorTool:
                 "success": False,
                 "error": str(e),
             }
-        except Exception as e:
-            logger.warning(f"PDF extraction error for {url}: {e}")
+        except Exception as pdf_error:
+            # Check if it's a PyPDF2-specific error (works with both old and new PyPDF2 versions)
+            error_name = type(pdf_error).__name__
+            if "PdfReadError" in error_name or "PdfStreamError" in error_name:
+                logger.error(f"PDF processing error for {url}: {pdf_error}")
+                return {
+                    "url": url,
+                    "content": "",
+                    "page_count": 0,
+                    "source": "pdf",
+                    "success": False,
+                    "error": f"PDF processing error: {str(pdf_error)}",
+                }
+            # For other unexpected errors
+            logger.warning(f"Unexpected PDF extraction error for {url}: {pdf_error}")
             return {
                 "url": url,
                 "content": "",
                 "page_count": 0,
                 "source": "pdf",
                 "success": False,
-                "error": str(e),
+                "error": str(pdf_error),
             }
 
     def extract_from_arxiv_papers(self, papers: list[dict[str, Any]]) -> list[dict[str, Any]]:

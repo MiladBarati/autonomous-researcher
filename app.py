@@ -318,8 +318,18 @@ def run_research(topic: str) -> ResearchState | None:
 
             return final_state
 
+    except ValidationError as e:
+        st.error(f"Invalid input: {str(e)}")
+        return None
+    except ValueError as e:
+        st.error(f"Configuration error: {str(e)}")
+        st.info("Please check your .env file and ensure all required API keys are set.")
+        return None
+    except (FileNotFoundError, PermissionError, OSError) as e:
+        st.error(f"File system error: {str(e)}")
+        return None
     except Exception as e:
-        st.error(f"Error during research: {str(e)}")
+        st.error(f"Unexpected error during research: {str(e)}")
         st.exception(e)
         return None
 

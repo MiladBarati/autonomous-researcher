@@ -197,6 +197,8 @@ def validate_url(url: str | object, allowed_schemes: set[str] | None = None) -> 
     # Parse URL
     try:
         parsed = urlparse(url)
+    except (ValueError, TypeError) as e:
+        raise ValidationError(f"Invalid URL format: {e}") from e
     except Exception as e:
         raise ValidationError(f"Invalid URL format: {e}") from e
 
@@ -206,6 +208,8 @@ def validate_url(url: str | object, allowed_schemes: set[str] | None = None) -> 
         url = f"https://{url}"
         try:
             parsed = urlparse(url)
+        except (ValueError, TypeError) as e:
+            raise ValidationError(f"Invalid URL format: {e}") from e
         except Exception as e:
             raise ValidationError(f"Invalid URL format: {e}") from e
 

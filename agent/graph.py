@@ -119,7 +119,27 @@ SEARCH QUERIES:
             HumanMessage(content=planning_prompt),
         ]
 
-        response = self.llm.invoke(messages)
+        try:
+            response = self.llm.invoke(messages)
+        except Exception as e:
+            error_type = type(e).__name__
+            if "RateLimit" in error_type or "rate_limit" in str(e).lower():
+                logger.error(f"LLM rate limit error during planning: {e}")
+                raise RuntimeError(f"Rate limit exceeded. Please try again later: {e}") from e
+            elif (
+                "Authentication" in error_type
+                or "auth" in str(e).lower()
+                or "api_key" in str(e).lower()
+            ):
+                logger.error(f"LLM authentication error during planning: {e}")
+                raise ValueError(f"Authentication failed. Please check your API key: {e}") from e
+            elif "Timeout" in error_type or "timeout" in str(e).lower():
+                logger.error(f"LLM timeout error during planning: {e}")
+                raise RuntimeError(f"Request timed out. Please try again: {e}") from e
+            else:
+                logger.error(f"LLM API error during planning: {e}", exc_info=True)
+                raise RuntimeError(f"LLM API error: {e}") from e
+
         # Handle union type: content can be str | list[str | dict[Any, Any]]
         content = response.content
         plan_text: str = content if isinstance(content, str) else str(content)
@@ -408,7 +428,27 @@ Please write a comprehensive, well-organized research report (aim for 800-1500 w
             HumanMessage(content=synthesis_prompt),
         ]
 
-        response = self.llm.invoke(messages)
+        try:
+            response = self.llm.invoke(messages)
+        except Exception as e:
+            error_type = type(e).__name__
+            if "RateLimit" in error_type or "rate_limit" in str(e).lower():
+                logger.error(f"LLM rate limit error during synthesis: {e}")
+                raise RuntimeError(f"Rate limit exceeded. Please try again later: {e}") from e
+            elif (
+                "Authentication" in error_type
+                or "auth" in str(e).lower()
+                or "api_key" in str(e).lower()
+            ):
+                logger.error(f"LLM authentication error during synthesis: {e}")
+                raise ValueError(f"Authentication failed. Please check your API key: {e}") from e
+            elif "Timeout" in error_type or "timeout" in str(e).lower():
+                logger.error(f"LLM timeout error during synthesis: {e}")
+                raise RuntimeError(f"Request timed out. Please try again: {e}") from e
+            else:
+                logger.error(f"LLM API error during synthesis: {e}", exc_info=True)
+                raise RuntimeError(f"LLM API error: {e}") from e
+
         # Handle union type: content can be str | list[str | dict[Any, Any]]
         content = response.content
         synthesis: str = content if isinstance(content, str) else str(content)

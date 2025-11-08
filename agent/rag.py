@@ -88,13 +88,29 @@ class RAGPipeline:
             logger.debug(f"Using existing collection: {self.collection_name}")
             # ChromaDB doesn't have complete type stubs, so we use cast
             return cast(Collection, collection)
-        except Exception:
+        except chromadb.errors.InvalidCollectionException:
+            # Collection doesn't exist, create it
             collection = self.client.create_collection(  # type: ignore[attr-defined]
                 name=self.collection_name, metadata={"hnsw:space": "cosine"}
             )
             logger.info(f"Created new collection: {self.collection_name}")
             # ChromaDB doesn't have complete type stubs, so we use cast
             return cast(Collection, collection)
+        except chromadb.errors.ChromaError as e:
+            logger.error(f"ChromaDB error accessing collection: {e}", exc_info=True)
+            # Try to create collection as fallback
+            try:
+                collection = self.client.create_collection(  # type: ignore[attr-defined]
+                    name=self.collection_name, metadata={"hnsw:space": "cosine"}
+                )
+                logger.info(f"Created new collection after error: {self.collection_name}")
+                return cast(Collection, collection)
+            except Exception as create_error:
+                logger.error(f"Failed to create collection: {create_error}", exc_info=True)
+                raise
+        except Exception as e:
+            logger.error(f"Unexpected error accessing collection: {e}", exc_info=True)
+            raise
 
     def chunk_documents(self, documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
@@ -280,8 +296,21 @@ class RAGPipeline:
             self.client.delete_collection(name=self.collection_name)  # type: ignore[attr-defined]
             self.collection = self._get_or_create_collection()
             logger.info(f"Cleared collection: {self.collection_name}")
+        except chromadb.errors.InvalidCollectionException:
+            # Collection doesn't exist, just create a new one
+            self.collection = self._get_or_create_collection()
+            logger.info(f"Collection didn't exist, created new: {self.collection_name}")
+        except chromadb.errors.ChromaError as e:
+            logger.error(f"ChromaDB error clearing collection: {e}", exc_info=True)
+            # Try to recreate collection
+            try:
+                self.collection = self._get_or_create_collection()
+            except Exception as recreate_error:
+                logger.error(f"Failed to recreate collection: {recreate_error}", exc_info=True)
+                raise
         except Exception as e:
-            logger.error(f"Error clearing collection: {e}", exc_info=True)
+            logger.error(f"Unexpected error clearing collection: {e}", exc_info=True)
+            raise
 
     def format_retrieved_context(self, chunks: list[dict[str, Any]]) -> str:
         """
