@@ -13,11 +13,15 @@ An event-driven AI research agent that autonomously retrieves, summarizes, and s
 
 💾 **RAG Pipeline**: Vector storage with ChromaDB and semantic retrieval for context-aware synthesis
 
-⚡ **Fast Inference**: Powered by Groq's high-speed LLM inference (Llama 3.1)
+⚡ **Fast Inference**: Powered by Groq's high-speed LLM inference (Llama 3.3)
 
 🌐 **Dual Interfaces**: Both Streamlit web UI and CLI support
 
 📊 **Real-time Tracking**: Visual progress monitoring and detailed result exploration
+
+🏥 **Health API**: FastAPI-based health check and monitoring endpoints
+
+📈 **Metrics & Monitoring**: Built-in metrics collection and system monitoring
 
 ## Architecture
 
@@ -78,7 +82,7 @@ Or install manually:
 pip install langgraph langchain langchain-groq langchain-community \
     langchain-text-splitters chromadb sentence-transformers tavily-python \
     arxiv beautifulsoup4 playwright pypdf2 pdfplumber streamlit \
-    python-dotenv requests tiktoken
+    python-dotenv requests tiktoken fastapi uvicorn psutil
 ```
 
 3. **Set up environment variables**
@@ -193,6 +197,35 @@ python main.py "quantum computing applications"
 
 The report will be displayed and saved to a markdown file.
 
+### Health Check API
+
+The project includes a FastAPI-based health check API for monitoring and observability:
+
+```bash
+python health_api.py
+```
+
+Or using uvicorn directly:
+
+```bash
+uvicorn health_api:app --host 0.0.0.0 --port 8080
+```
+
+**Available Endpoints:**
+- `GET /` - Service information
+- `GET /health` - Basic health check
+- `GET /health/live` - Liveness probe
+- `GET /health/ready` - Readiness probe (checks dependencies and vector store)
+- `GET /metrics` - All collected metrics
+- `GET /metrics/summary` - Metrics summary
+- `GET /status` - Comprehensive service status
+
+**Environment Variables:**
+- `HEALTH_API_PORT` - Port for health API (default: 8080)
+- `HEALTH_API_HOST` - Host for health API (default: 0.0.0.0)
+
+The health API can run alongside the Streamlit application for production monitoring.
+
 ## Project Structure
 
 ```
@@ -202,12 +235,21 @@ autonomous-research-assistant/
 │   ├── state.py             # LangGraph state definition
 │   ├── tools.py             # Research tools (search, scrape, etc.)
 │   ├── graph.py             # LangGraph workflow
-│   └── rag.py               # RAG pipeline (chunking, embedding, retrieval)
+│   ├── rag.py               # RAG pipeline (chunking, embedding, retrieval)
+│   ├── logger.py            # Logging configuration
+│   ├── metrics.py           # Metrics collection
+│   ├── monitoring.py        # System monitoring
+│   └── validation.py        # Input validation
 ├── config.py                # Configuration and API clients
 ├── app.py                   # Streamlit web interface
 ├── main.py                  # CLI entry point
-├── pyproject.toml           # Dependencies
+├── health_api.py            # FastAPI health check and monitoring API
+├── pyproject.toml           # Dependencies and project configuration
+├── docker-compose.yml       # Docker Compose configuration
+├── Dockerfile               # Docker image definition
 ├── .env                     # Environment variables (API keys)
+├── docs/                    # Sphinx documentation
+├── tests/                   # Test suite
 └── README.md                # This file
 ```
 
@@ -252,6 +294,9 @@ Edit `config.py` or use environment variables to customize:
 - **ArXiv**: Academic paper search
 - **Streamlit**: Web interface
 - **PyPDF2**: PDF processing
+- **FastAPI**: Health check API
+- **Uvicorn**: ASGI server for health API
+- **psutil**: System monitoring
 
 ## Features in Detail
 
@@ -275,6 +320,13 @@ Edit `config.py` or use environment variables to customize:
 ### User Interfaces
 - **Web UI**: Rich, interactive Streamlit interface with real-time progress
 - **CLI**: Simple command-line interface for scripting and automation
+- **Health API**: RESTful API for monitoring, health checks, and metrics
+
+### Monitoring & Observability
+- **Metrics Collection**: Tracks research requests, API calls, durations, and errors
+- **System Monitoring**: Memory usage tracking and system resource monitoring
+- **Health Checks**: Liveness and readiness probes for containerized deployments
+- **Logging**: Comprehensive logging with context tracking
 
 ## Troubleshooting
 
@@ -365,6 +417,35 @@ black . ; isort . ; ruff check . ; ruff format . ; mypy .
 
 All tools are configured in `pyproject.toml` with sensible defaults for Python 3.11+.
 
+## Testing
+
+The project includes a comprehensive test suite using pytest.
+
+### Running Tests
+
+Run all tests:
+```bash
+pytest
+```
+
+Run tests with coverage:
+```bash
+pytest --cov=agent --cov-report=html
+```
+
+Run tests with verbose output:
+```bash
+pytest -v
+```
+
+### Test Structure
+
+- **Unit tests**: Test individual functions and classes
+- **Integration tests**: Test component interactions
+- **Test fixtures**: Shared test utilities in `tests/conftest.py`
+
+The test suite maintains 80% code coverage threshold. Coverage reports are generated in HTML format for detailed analysis.
+
 ## Documentation
 
 API documentation is generated using Sphinx with autodoc. The documentation includes detailed API references for all modules, classes, and functions.
@@ -408,6 +489,29 @@ The generated HTML documentation will be in `docs/_build/html/`. Open `index.htm
 
 After building, you can view the documentation by opening `docs/_build/html/index.html` in your web browser.
 
+## Additional Features
+
+### Metrics & Monitoring
+
+The project includes comprehensive metrics collection and monitoring:
+
+- **Counters**: Research requests, completions, failures, API calls, errors
+- **Gauges**: Active research requests, total documents stored
+- **Histograms**: Research duration, API call duration
+- **System Metrics**: Memory usage tracking
+
+Access metrics via the health API or programmatically through the `agent.metrics` module.
+
+### Logging
+
+Structured logging with context tracking:
+- Research topic tracking
+- Request ID correlation
+- Error tracking with stack traces
+- Configurable log levels
+
+Logs are written to `logs/research_assistant.log` and `logs/research_assistant_errors.log`.
+
 ## Future Enhancements
 
 - [ ] Support for more LLM providers (OpenAI, Anthropic, etc.)
@@ -417,6 +521,8 @@ After building, you can view the documentation by opening `docs/_build/html/inde
 - [ ] Conversational refinement of reports
 - [ ] Export to multiple formats (PDF, DOCX)
 - [ ] Scheduled/batch research jobs
+- [ ] Prometheus metrics export
+- [ ] Grafana dashboards
 
 ## License
 
