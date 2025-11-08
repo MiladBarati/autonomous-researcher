@@ -16,52 +16,65 @@ class DummyLLM:
 
 @pytest.fixture()
 def agent_with_stubs(monkeypatch: Any) -> Any:
-    # Stub get_llm to avoid API validation
-    monkeypatch.setattr(
-        "agent.graph.get_llm",
-        lambda: DummyLLM("RESEARCH PLAN:\nPlan\n\nSEARCH QUERIES:\n1. foo\n2. bar\n"),
-        raising=False,
-    )
+    from pydantic import SecretStr
 
-    # Stub RAGPipeline used inside ResearchAgent
-    with patch("agent.graph.RAGPipeline") as RAG:
-        rag_instance = MagicMock()
-        rag_instance.store_documents.return_value = 3
-        rag_instance.get_collection_stats.return_value = {"document_count": 3}
-        rag_instance.retrieve.return_value = [
-            {"text": "t1", "metadata": {"title": "S1"}, "similarity_score": 0.9, "rank": 1}
-        ]
-        rag_instance.format_retrieved_context.return_value = "[Source 1: S1]\n t1"
-        RAG.return_value = rag_instance
+    from config import Config
 
-        # Build agent
-        agent = ResearchAgent()
-
-        # Replace llm for synthesis step too
-        agent.llm = DummyLLM("SYNTHESIS TEXT")  # type: ignore[assignment]
-
-        # Stub tools to deterministic outputs
-        agent.tools.tavily.search = MagicMock(  # type: ignore[method-assign]
-            return_value=[{"title": "A", "url": "http://a", "content": "c", "score": 1.0}]
+    # Mock Tavily API key before creating agent
+    with patch.object(Config, "TAVILY_API_KEY", SecretStr("test-key")):
+        # Stub get_llm to avoid API validation
+        monkeypatch.setattr(
+            "agent.graph.get_llm",
+            lambda: DummyLLM("RESEARCH PLAN:\nPlan\n\nSEARCH QUERIES:\n1. foo\n2. bar\n"),
+            raising=False,
         )
-        agent.tools.scraper.scrape_multiple = MagicMock(  # type: ignore[method-assign]
-            return_value=[
-                {
-                    "title": "A",
-                    "url": "http://a",
-                    "content": "content",
-                    "source": "web_scrape",
-                    "success": True,
-                }
+
+        # Stub RAGPipeline used inside ResearchAgent
+        with patch("agent.graph.RAGPipeline") as RAG:
+            rag_instance = MagicMock()
+            rag_instance.store_documents.return_value = 3
+            rag_instance.get_collection_stats.return_value = {"document_count": 3}
+            rag_instance.retrieve.return_value = [
+                {"text": "t1", "metadata": {"title": "S1"}, "similarity_score": 0.9, "rank": 1}
             ]
-        )
-        agent.tools.arxiv.search = MagicMock(  # type: ignore[method-assign]
-            return_value=[
-                {"title": "Paper", "authors": ["X"], "summary": "sum", "url": "u", "pdf_url": "pu"}
-            ]
-        )
+            rag_instance.format_retrieved_context.return_value = "[Source 1: S1]\n t1"
+            RAG.return_value = rag_instance
 
-    return agent
+            # Build agent
+            agent = ResearchAgent()
+
+            # Replace llm for synthesis step too
+            agent.llm = DummyLLM("SYNTHESIS TEXT")  # type: ignore[assignment]
+
+            # Stub tools to deterministic outputs
+            agent.tools.tavily.search = MagicMock(  # type: ignore[method-assign]
+                return_value=[{"title": "A", "url": "http://a", "content": "c", "score": 1.0}]
+            )
+            agent.tools.scraper.scrape_multiple = MagicMock(  # type: ignore[method-assign]
+                return_value=[
+                    {
+                        "title": "A",
+                        "url": "http://a",
+                        "content": "content",
+                        "source": "web_scrape",
+                        "success": True,
+                    }
+                ]
+            )
+            agent.tools.arxiv.search = MagicMock(  # type: ignore[method-assign]
+                return_value=[
+                    {
+                        "title": "Paper",
+                        "authors": ["X"],
+                        "summary": "sum",
+                        "url": "u",
+                        "pdf_url": "pu",
+                    }
+                ]
+            )
+
+            # Return agent - it's already created with mocked API key
+            return agent
 
 
 def test_plan_research_generates_queries(agent_with_stubs: Any) -> None:

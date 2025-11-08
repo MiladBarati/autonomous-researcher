@@ -6,21 +6,26 @@ from agent.tools import ArxivSearchTool, PDFProcessorTool, TavilySearchTool, Web
 
 
 def test_tavily_search_tool_returns_mapped_results() -> None:
-    tool = TavilySearchTool()
-    fake_response = {
-        "results": [
-            {"title": "A", "url": "http://a", "content": "ca", "score": 0.9},
-            {"title": "B", "url": "http://b", "content": "cb", "score": 0.8},
-        ]
-    }
-    tool.client.search = MagicMock(return_value=fake_response)
+    from pydantic import SecretStr
 
-    results: list[dict[str, Any]] = tool.search("query", max_results=2)
+    from config import Config
 
-    assert len(results) == 2
-    assert results[0]["title"] == "A"
-    assert results[0]["source"] == "tavily"
-    tool.client.search.assert_called_once()
+    with patch.object(Config, "TAVILY_API_KEY", SecretStr("test-key")):
+        tool = TavilySearchTool()
+        fake_response = {
+            "results": [
+                {"title": "A", "url": "http://a", "content": "ca", "score": 0.9},
+                {"title": "B", "url": "http://b", "content": "cb", "score": 0.8},
+            ]
+        }
+        tool.client.search = MagicMock(return_value=fake_response)
+
+        results: list[dict[str, Any]] = tool.search("query", max_results=2)
+
+        assert len(results) == 2
+        assert results[0]["title"] == "A"
+        assert results[0]["source"] == "tavily"
+        tool.client.search.assert_called_once()
 
 
 def test_web_scraper_scrape_parses_content() -> None:
@@ -130,41 +135,59 @@ def test_pdf_processor_extract_from_url() -> None:
 
 def test_tavily_search_tool_handles_error() -> None:
     """Test that TavilySearchTool handles errors gracefully"""
-    tool = TavilySearchTool()
-    tool.client.search = MagicMock(side_effect=Exception("API Error"))
+    from pydantic import SecretStr
 
-    results: list[dict[str, Any]] = tool.search("query")
-    assert results == []
+    from config import Config
+
+    with patch.object(Config, "TAVILY_API_KEY", SecretStr("test-key")):
+        tool = TavilySearchTool()
+        tool.client.search = MagicMock(side_effect=Exception("API Error"))
+
+        results: list[dict[str, Any]] = tool.search("query")
+        assert results == []
 
 
 def test_tavily_search_tool_handles_empty_results() -> None:
     """Test that TavilySearchTool handles empty results"""
-    tool = TavilySearchTool()
-    tool.client.search = MagicMock(return_value={"results": []})
+    from pydantic import SecretStr
 
-    results: list[dict[str, Any]] = tool.search("query")
-    assert results == []
+    from config import Config
+
+    with patch.object(Config, "TAVILY_API_KEY", SecretStr("test-key")):
+        tool = TavilySearchTool()
+        tool.client.search = MagicMock(return_value={"results": []})
+
+        results: list[dict[str, Any]] = tool.search("query")
+        assert results == []
 
 
 def test_tavily_search_tool_uses_default_max_results() -> None:
     """Test that TavilySearchTool uses default max_results"""
+    from pydantic import SecretStr
+
     from config import Config
 
-    tool = TavilySearchTool()
-    tool.client.search = MagicMock(return_value={"results": []})
+    with patch.object(Config, "TAVILY_API_KEY", SecretStr("test-key")):
+        tool = TavilySearchTool()
+        tool.client.search = MagicMock(return_value={"results": []})
 
-    tool.search("query")
-    call_kwargs = tool.client.search.call_args[1]
-    assert call_kwargs["max_results"] == Config.MAX_SEARCH_RESULTS
+        tool.search("query")
+        call_kwargs = tool.client.search.call_args[1]
+        assert call_kwargs["max_results"] == Config.MAX_SEARCH_RESULTS
 
 
 def test_tavily_search_tool_as_tool() -> None:
     """Test that TavilySearchTool.as_tool returns LangChain Tool"""
-    tool = TavilySearchTool()
-    langchain_tool = tool.as_tool()
+    from pydantic import SecretStr
 
-    assert langchain_tool.name == "web_search"
-    assert "web" in langchain_tool.description.lower()
+    from config import Config
+
+    with patch.object(Config, "TAVILY_API_KEY", SecretStr("test-key")):
+        tool = TavilySearchTool()
+        langchain_tool = tool.as_tool()
+
+        assert langchain_tool.name == "web_search"
+        assert "web" in langchain_tool.description.lower()
 
 
 def test_web_scraper_handles_network_error() -> None:
@@ -399,54 +422,70 @@ def test_pdf_processor_as_tool() -> None:
 
 def test_tool_manager_initializes_all_tools() -> None:
     """Test that ToolManager initializes all tools"""
-    from agent.tools import ToolManager
+    from pydantic import SecretStr
 
-    manager = ToolManager()
-    assert manager.tavily is not None
-    assert manager.scraper is not None
-    assert manager.arxiv is not None
-    assert manager.pdf_processor is not None
+    from agent.tools import ToolManager
+    from config import Config
+
+    with patch.object(Config, "TAVILY_API_KEY", SecretStr("test-key")):
+        manager = ToolManager()
+        assert manager.tavily is not None
+        assert manager.scraper is not None
+        assert manager.arxiv is not None
+        assert manager.pdf_processor is not None
 
 
 def test_tool_manager_get_all_tools() -> None:
     """Test that ToolManager.get_all_tools returns all tools"""
     from langchain_core.tools import Tool
+    from pydantic import SecretStr
 
     from agent.tools import ToolManager
+    from config import Config
 
-    manager = ToolManager()
-    tools: list[Tool] = manager.get_all_tools()
+    with patch.object(Config, "TAVILY_API_KEY", SecretStr("test-key")):
+        manager = ToolManager()
+        tools: list[Tool] = manager.get_all_tools()
 
-    assert len(tools) == 4
-    assert all(isinstance(tool, Tool) for tool in tools)
-    tool_names = [tool.name for tool in tools]
-    assert "web_search" in tool_names
-    assert "web_scraper" in tool_names
-    assert "arxiv_search" in tool_names
-    assert "pdf_processor" in tool_names
+        assert len(tools) == 4
+        assert all(isinstance(tool, Tool) for tool in tools)
+        tool_names = [tool.name for tool in tools]
+        assert "web_search" in tool_names
+        assert "web_scraper" in tool_names
+        assert "arxiv_search" in tool_names
+        assert "pdf_processor" in tool_names
 
 
 def test_tool_manager_get_tool_descriptions() -> None:
     """Test that ToolManager.get_tool_descriptions returns formatted descriptions"""
+    from pydantic import SecretStr
+
     from agent.tools import ToolManager
+    from config import Config
 
-    manager = ToolManager()
-    descriptions: str = manager.get_tool_descriptions()
+    with patch.object(Config, "TAVILY_API_KEY", SecretStr("test-key")):
+        manager = ToolManager()
+        descriptions: str = manager.get_tool_descriptions()
 
-    assert isinstance(descriptions, str)
-    assert "web_search" in descriptions
-    assert "web_scraper" in descriptions
-    assert "arxiv_search" in descriptions
-    assert "pdf_processor" in descriptions
+        assert isinstance(descriptions, str)
+        assert "web_search" in descriptions
+        assert "web_scraper" in descriptions
+        assert "arxiv_search" in descriptions
+        assert "pdf_processor" in descriptions
 
 
 def test_tavily_search_tool_handles_invalid_query() -> None:
     """Test that TavilySearchTool handles invalid query"""
-    tool = TavilySearchTool()
+    from pydantic import SecretStr
 
-    # Empty query should trigger validation error
-    results: list[dict[str, Any]] = tool.search("")
-    assert results == []
+    from config import Config
+
+    with patch.object(Config, "TAVILY_API_KEY", SecretStr("test-key")):
+        tool = TavilySearchTool()
+
+        # Empty query should trigger validation error
+        results: list[dict[str, Any]] = tool.search("")
+        assert results == []
 
 
 def test_web_scraper_handles_invalid_url() -> None:

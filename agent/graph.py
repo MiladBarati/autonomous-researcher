@@ -11,11 +11,17 @@ Defines the state graph with nodes for:
 - Retrieval and synthesis
 """
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 from langgraph.graph import END, StateGraph
+
+if TYPE_CHECKING:
+    from langgraph.graph import CompiledGraph
+else:
+    # Runtime type stub for LangGraph CompiledGraph
+    CompiledGraph = Any
 
 from agent.logger import get_logger, set_logging_context
 from agent.rag import RAGPipeline
@@ -34,12 +40,16 @@ class ResearchAgent:
         self.llm: ChatGroq = get_llm()
         self.tools: ToolManager = ToolManager()
         self.rag: RAGPipeline = RAGPipeline()
-        # Note: Using Any because langgraph doesn't have complete type stubs for CompiledGraph
-        self.graph: Any = self._build_graph()
+        # Note: Using type: ignore because langgraph doesn't have complete type stubs
+        self.graph: CompiledGraph = self._build_graph()
 
-    def _build_graph(self) -> Any:
-        # Note: Returns CompiledGraph, but langgraph doesn't have complete type stubs
-        """Build the LangGraph state machine"""
+    def _build_graph(self) -> CompiledGraph:
+        """
+        Build the LangGraph state machine.
+
+        Returns:
+            Compiled graph ready for execution
+        """
 
         # Create state graph
         workflow = StateGraph(ResearchState)

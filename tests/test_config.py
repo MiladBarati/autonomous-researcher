@@ -30,8 +30,8 @@ def test_config_validate_missing_keys() -> None:
     """Test that Config.validate raises error for missing keys"""
     with (
         patch.dict(os.environ, {}, clear=True),
-        patch.object(Config, "GROQ_API_KEY", ""),
-        patch.object(Config, "TAVILY_API_KEY", ""),
+        patch.object(Config, "GROQ_API_KEY", None),
+        patch.object(Config, "TAVILY_API_KEY", None),
         pytest.raises(ValueError, match="Missing required API keys"),
     ):
         Config.validate()
@@ -39,9 +39,11 @@ def test_config_validate_missing_keys() -> None:
 
 def test_config_validate_missing_groq_key() -> None:
     """Test that Config.validate raises error for missing GROQ key"""
+    from pydantic import SecretStr
+
     with (
-        patch.object(Config, "GROQ_API_KEY", ""),
-        patch.object(Config, "TAVILY_API_KEY", "test-tavily-key"),
+        patch.object(Config, "GROQ_API_KEY", None),
+        patch.object(Config, "TAVILY_API_KEY", SecretStr("test-tavily-key")),
         pytest.raises(ValueError, match="Missing required API keys"),
     ):
         Config.validate()
@@ -49,9 +51,11 @@ def test_config_validate_missing_groq_key() -> None:
 
 def test_config_validate_missing_tavily_key() -> None:
     """Test that Config.validate raises error for missing Tavily key"""
+    from pydantic import SecretStr
+
     with (
-        patch.object(Config, "GROQ_API_KEY", "test-groq-key"),
-        patch.object(Config, "TAVILY_API_KEY", ""),
+        patch.object(Config, "GROQ_API_KEY", SecretStr("test-groq-key")),
+        patch.object(Config, "TAVILY_API_KEY", None),
         pytest.raises(ValueError, match="Missing required API keys"),
     ):
         Config.validate()

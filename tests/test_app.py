@@ -43,9 +43,12 @@ def test_display_header() -> None:
 
 def test_display_sidebar() -> None:
     """Test display_sidebar"""
+    mock_session_state = MagicMock()
+    mock_session_state.research_history = []
+
     with (
         patch("app.st.sidebar"),
-        patch("app.st.session_state", {"research_history": []}),
+        patch("app.st.session_state", mock_session_state),
         patch("app.Config") as MockConfig,
     ):
         MockConfig.MODEL_NAME = "test-model"
@@ -114,7 +117,8 @@ def test_display_progress_tracking() -> None:
         patch("app.st.metric"),
         patch("app.st.markdown"),
     ):
-        mock_columns.return_value = [MagicMock(), MagicMock(), MagicMock()]
+        # Code needs 7 columns (3 for metrics + 7 for stages)
+        mock_columns.return_value = [MagicMock() for _ in range(10)]
 
         from app import display_progress_tracking
 
@@ -166,8 +170,11 @@ def test_display_research_results() -> None:
 
 def test_run_research_success() -> None:
     """Test run_research with valid topic"""
+    mock_session_state = MagicMock()
+    mock_session_state.agent = None
+
     with (
-        patch("app.st.session_state", {"agent": None}),
+        patch("app.st.session_state", mock_session_state),
         patch("app.st.spinner") as mock_spinner,
         patch("app.create_research_graph") as mock_create,
         patch("app.Config.validate", return_value=True),
@@ -219,12 +226,15 @@ def test_run_research_exception() -> None:
 
 def test_main() -> None:
     """Test main function"""
+    mock_session_state = MagicMock()
+    mock_session_state.research_results = None
+
     with (
         patch("app.initialize_session_state") as mock_init,
         patch("app.display_header") as mock_header,
         patch("app.display_sidebar") as mock_sidebar,
         patch("app.display_research_input", return_value=("", False)) as mock_input,
-        patch("app.st.session_state", {"research_results": None}),
+        patch("app.st.session_state", mock_session_state),
         patch("app.st.divider"),
         patch("app.st.markdown"),
     ):

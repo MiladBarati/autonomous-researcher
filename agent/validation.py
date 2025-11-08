@@ -49,7 +49,9 @@ ALLOWED_URL_SCHEMES = {"http", "https"}
 INVALID_FILENAME_CHARS = r'[<>:"/\\|?*\x00-\x1f]'
 
 
-def sanitize_text(text: Any, max_length: int | None = None, allow_newlines: bool = True) -> str:
+def sanitize_text(
+    text: str | object, max_length: int | None = None, allow_newlines: bool = True
+) -> str:
     """
     Sanitize text input by removing dangerous patterns and normalizing whitespace.
 
@@ -95,7 +97,7 @@ def sanitize_text(text: Any, max_length: int | None = None, allow_newlines: bool
     return cast(str, text)
 
 
-def validate_topic(topic: Any) -> str:
+def validate_topic(topic: str | object) -> str:
     """
     Validate and sanitize research topic.
 
@@ -135,7 +137,7 @@ def validate_topic(topic: Any) -> str:
     return sanitized
 
 
-def validate_query(query: Any) -> str:
+def validate_query(query: str | object) -> str:
     """
     Validate and sanitize search query.
 
@@ -168,7 +170,7 @@ def validate_query(query: Any) -> str:
     return sanitized
 
 
-def validate_url(url: Any, allowed_schemes: set[str] | None = None) -> str:
+def validate_url(url: str | object, allowed_schemes: set[str] | None = None) -> str:
     """
     Validate and sanitize URL.
 
@@ -270,7 +272,7 @@ def validate_urls(urls: list[str], max_urls: int | None = None) -> list[str]:
     return validated_urls
 
 
-def sanitize_filename(filename: Any, max_length: int | None = None) -> str:
+def sanitize_filename(filename: str | object, max_length: int | None = None) -> str:
     """
     Sanitize filename by removing invalid characters.
 
@@ -362,7 +364,7 @@ def validate_state_data(data: dict[str, Any]) -> dict[str, Any]:
     return validated
 
 
-def sanitize_for_display(text: Any, max_length: int = 1000) -> str:
+def sanitize_for_display(text: str | object, max_length: int = 1000) -> str:
     """
     Sanitize text for safe display in HTML/UI.
 

@@ -7,24 +7,40 @@ using ChromaDB and sentence-transformers.
 
 import hashlib
 from datetime import datetime
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import chromadb
 from chromadb import Collection
 from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer
 
+from agent.logger import get_logger
+from agent.validation import ValidationError, validate_query
+from config import Config
+
+if TYPE_CHECKING:
+    from chromadb import PersistentClient
+else:
+    # Runtime type stub for ChromaDB client
+    PersistentClient = Any
+
+
+# TypedDict for ChromaDB query results
+# ChromaDB returns a dict with these keys when querying
+class ChromaQueryResult(TypedDict, total=False):
+    """Type definition for ChromaDB query results"""
+
+    ids: list[list[str]]
+    documents: list[list[str]]
+    metadatas: list[list[dict[str, Any]]]
+    distances: list[list[float]]
+
+
 try:
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 except ImportError:
     # Fallback for older langchain versions
-    from langchain.text_splitter import (  # type: ignore[no-redef]
-        RecursiveCharacterTextSplitter,
-    )
-
-from agent.logger import get_logger
-from agent.validation import ValidationError, validate_query
-from config import Config
+    from langchain.text_splitter import RecursiveCharacterTextSplitter  # type: ignore[no-redef]
 
 logger = get_logger("rag")
 
@@ -62,8 +78,8 @@ class RAGPipeline:
         self.embedding_model: SentenceTransformer = SentenceTransformer(Config.EMBEDDING_MODEL)
 
         # Initialize ChromaDB client
-        # Note: Using Any because chromadb doesn't have complete type stubs
-        self.client: Any = chromadb.PersistentClient(
+        # Note: Using type: ignore because chromadb doesn't have complete type stubs
+        self.client: PersistentClient = chromadb.PersistentClient(  # type: ignore[assignment]
             path=Config.CHROMA_PERSIST_DIR,
             settings=Settings(anonymized_telemetry=False, allow_reset=True),
         )
@@ -233,8 +249,8 @@ class RAGPipeline:
         query_embedding: list[float] = cast(list[list[float]], query_embedding_raw.tolist())[0]
 
         # Query ChromaDB
-        # Note: Using Any for ChromaDB.query() because chromadb doesn't have complete type stubs
-        results: Any = self.collection.query(
+        # Note: Using type: ignore because chromadb doesn't have complete type stubs
+        results: ChromaQueryResult = self.collection.query(  # type: ignore[assignment]
             query_embeddings=cast(Any, [query_embedding]),
             n_results=top_k_value,
             include=["documents", "metadatas", "distances"],
