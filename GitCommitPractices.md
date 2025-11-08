@@ -39,7 +39,7 @@ I'd like to remind you that writing informative and detailed commit messages tha
 <BLANK LINE>
 <optional footer(s)>
 ```
-  
+
 ```
 feat: add foo support
 ^--^  ^------------^

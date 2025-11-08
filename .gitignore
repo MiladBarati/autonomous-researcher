@@ -35,6 +35,7 @@ logs/
 .dmypy.json
 dmypy.json
 .coverage
+.pre-commit/
 
 # OS
 .DS_Store

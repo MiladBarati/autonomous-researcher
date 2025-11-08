@@ -217,4 +217,3 @@ MAX_SCRAPE_URLS = 5        # URLs to scrape fully
 5. Experiment with different topics and compare reports
 
 Enjoy your autonomous research assistant! 🚀
-

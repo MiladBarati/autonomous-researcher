@@ -177,7 +177,7 @@ class RAGPipeline:
             metadata: dict[str, Any] = {k: v for k, v in chunk.items() if k not in ["id", "text"]}
             # ChromaDB requires all metadata values to be strings, ints, floats, or bools
             metadata = {
-                k: str(v) if not isinstance(v, (str, int, float, bool)) else v
+                k: str(v) if not isinstance(v, str | int | float | bool) else v
                 for k, v in metadata.items()
             }
             metadatas.append(metadata)

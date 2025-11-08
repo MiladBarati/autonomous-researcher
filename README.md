@@ -240,6 +240,7 @@ This project uses several code quality tools to maintain consistent code style a
 - **isort**: Import sorter
 - **ruff**: Fast linter and formatter
 - **mypy**: Static type checker
+- **pre-commit**: Git hooks for automated checks
 
 ### Installation
 
@@ -249,7 +250,25 @@ Install the development dependencies:
 pip install -e ".[dev]"
 ```
 
-### Usage
+### Pre-commit Hooks (Recommended)
+
+Set up pre-commit hooks to automatically run code quality checks before each commit:
+
+```bash
+pre-commit install
+```
+
+The hooks will run automatically on commit. You can also run them manually:
+
+```bash
+# Run all hooks on all files
+pre-commit run --all-files
+
+# Run hooks on staged files only
+pre-commit run
+```
+
+### Manual Usage
 
 **Format code with black:**
 ```bash
@@ -300,4 +319,3 @@ Contributions welcome! Please open an issue or submit a pull request.
 ## Acknowledgments
 
 Built with LangGraph, LangChain, Groq, and the amazing open-source community.
-

@@ -37,7 +37,13 @@ This project adheres to a code of conduct that all contributors are expected to 
    pip install -e ".[dev]"
    ```
 
-2. **Set up environment variables**:
+2. **Set up pre-commit hooks** (recommended):
+   ```bash
+   pre-commit install
+   ```
+   This will automatically run code quality checks before each commit.
+
+3. **Set up environment variables**:
    Create a `.env` file with your API keys:
    ```env
    GROQ_API_KEY=your_groq_api_key
@@ -45,7 +51,7 @@ This project adheres to a code of conduct that all contributors are expected to 
    LANGCHAIN_API_KEY=your_langchain_api_key  # Optional
    ```
 
-3. **Install Playwright browsers** (if needed for web scraping):
+4. **Install Playwright browsers** (if needed for web scraping):
    ```bash
    playwright install
    ```
@@ -81,7 +87,21 @@ This project uses several tools to maintain consistent code style:
 
 ### Running Code Quality Checks
 
-Before submitting your changes, run all code quality checks:
+**With pre-commit hooks (recommended):**
+
+If you've installed pre-commit hooks, they will run automatically on each commit. You can also run them manually:
+
+```bash
+# Run all hooks on all files
+pre-commit run --all-files
+
+# Run hooks on staged files only
+pre-commit run
+```
+
+**Manual checks:**
+
+If you prefer to run checks manually:
 
 ```bash
 # Format code
@@ -204,4 +224,3 @@ If you have questions or need help, please:
 - Review the README.md for project documentation
 
 Thank you for contributing! 🎉
-
