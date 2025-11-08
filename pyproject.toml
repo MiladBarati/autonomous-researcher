@@ -37,6 +37,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
     "black>=24.0.0",
     "isort>=5.13.0",
     "ruff>=0.5.0",
@@ -168,3 +169,23 @@ module = [
     "PyPDF2.*",
 ]
 ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["agent"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/chroma_db/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
