@@ -10,6 +10,7 @@ import sys
 
 from agent.graph import create_research_graph
 from agent.logger import get_logger, set_logging_context
+from agent.validation import ValidationError, validate_topic
 from config import Config
 
 logger = get_logger("main")
@@ -47,20 +48,28 @@ def main() -> None:
         sys.exit(1)
 
     try:
+        # Validate and sanitize topic input
+        try:
+            topic = validate_topic(args.topic)
+        except ValidationError as e:
+            logger.error(f"Invalid topic: {e}")
+            print(f"\nError: Invalid topic - {e}")
+            sys.exit(1)
+
         # Validate configuration
         Config.validate()
 
         # Set logging context
-        set_logging_context(topic=args.topic)
+        set_logging_context(topic=topic)
 
         logger.info("=" * 60)
         logger.info("Autonomous Research Assistant")
         logger.info("=" * 60)
-        logger.info(f"\nTopic: {args.topic}\n")
+        logger.info(f"\nTopic: {topic}\n")
 
         # Create agent and run research
         agent = create_research_graph()
-        final_state = agent.research(args.topic)
+        final_state = agent.research(topic)
 
         # Display results
         logger.info("=" * 60)
@@ -74,9 +83,11 @@ def main() -> None:
         print("\n" + "=" * 60)
 
         # Save to file
-        filename = f"research_report_{args.topic[:30].replace(' ', '_')}.md"
+        from agent.validation import sanitize_filename
+        safe_topic = sanitize_filename(topic[:30].replace(" ", "_"))
+        filename = f"research_report_{safe_topic}.md"
         with open(filename, "w", encoding="utf-8") as f:
-            f.write(f"# Research Report: {args.topic}\n\n")
+            f.write(f"# Research Report: {topic}\n\n")
             f.write(final_state.get("synthesis", ""))
 
         logger.info(f"Report saved to: {filename}")

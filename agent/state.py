@@ -7,6 +7,8 @@ from typing import Any, TypedDict
 
 from langchain_core.messages import BaseMessage
 
+from agent.validation import ValidationError, validate_topic
+
 
 class ResearchState(TypedDict):
     """
@@ -57,7 +59,16 @@ def create_initial_state(topic: str, request_id: str | None = None) -> ResearchS
 
     Returns:
         Initial ResearchState
+
+    Raises:
+        ValidationError: If topic is invalid
     """
+    # Validate and sanitize topic
+    try:
+        topic = validate_topic(topic)
+    except ValidationError as e:
+        raise ValidationError(f"Invalid topic for initial state: {e}") from e
+
     if request_id is None:
         request_id = str(uuid.uuid4())
 

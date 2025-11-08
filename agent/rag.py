@@ -20,6 +20,7 @@ except ImportError:
     from langchain.text_splitter import RecursiveCharacterTextSplitter  # type: ignore[no-redef]
 
 from agent.logger import get_logger
+from agent.validation import ValidationError, validate_query
 from config import Config
 
 logger = get_logger("rag")
@@ -204,6 +205,13 @@ class RAGPipeline:
         Returns:
             List of relevant chunks with metadata
         """
+        # Validate and sanitize query
+        try:
+            query = validate_query(query)
+        except ValidationError as e:
+            logger.error(f"Invalid retrieval query: {e}")
+            return []
+
         top_k_value: int = top_k or Config.TOP_K_RESULTS
 
         # Generate query embedding

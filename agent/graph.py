@@ -21,6 +21,7 @@ from agent.logger import get_logger, set_logging_context
 from agent.rag import RAGPipeline
 from agent.state import ResearchState
 from agent.tools import ToolManager
+from agent.validation import ValidationError, validate_query, validate_topic
 from config import Config, get_llm
 
 logger = get_logger("graph")
@@ -77,7 +78,13 @@ class ResearchAgent:
         set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
         logger.info("=== PLANNING RESEARCH ===")
 
+        # Validate topic
         topic: str = state["topic"]
+        try:
+            topic = validate_topic(topic)
+        except ValidationError as e:
+            logger.error(f"Invalid topic in state: {e}")
+            raise
 
         # Create planning prompt
         planning_prompt: str = f"""You are an autonomous research agent. Your task is to create a comprehensive research plan for the following topic:
@@ -125,11 +132,25 @@ SEARCH QUERIES:
                 # Extract query text, removing numbering
                 query: str = line.split(".", 1)[-1].strip() if "." in line else line.lstrip("- ")
                 if query:
-                    queries.append(query)
+                    # Validate and sanitize query
+                    try:
+                        query = validate_query(query)
+                        queries.append(query)
+                    except ValidationError as e:
+                        logger.warning(f"Skipping invalid query: {e}")
+                        continue
 
         # Fallback: if no queries extracted, use the topic
         if not queries:
-            queries = [topic, f"{topic} overview", f"{topic} recent developments"]
+            try:
+                queries = [
+                    validate_query(topic),
+                    validate_query(f"{topic} overview"),
+                    validate_query(f"{topic} recent developments"),
+                ]
+            except ValidationError:
+                # If topic itself is invalid, use a safe fallback
+                queries = [validate_query("research")] if topic else []
 
         logger.info("Research Plan Created")
         logger.info(f"Generated {len(queries)} search queries")
@@ -159,8 +180,18 @@ SEARCH QUERIES:
         queries: list[str] = state["search_queries"]
         all_results: list[dict[str, Any]] = []
 
-        for i, query in enumerate(queries[:5], 1):  # Limit to 5 queries
-            logger.debug(f"Query {i}/{len(queries[:5])}: {query}")
+        # Validate queries before processing
+        valid_queries: list[str] = []
+        for query in queries[:5]:  # Limit to 5 queries
+            try:
+                validated_query = validate_query(query)
+                valid_queries.append(validated_query)
+            except ValidationError as e:
+                logger.warning(f"Skipping invalid query '{query}': {e}")
+                continue
+
+        for i, query in enumerate(valid_queries, 1):
+            logger.debug(f"Query {i}/{len(valid_queries)}: {query}")
             results = self.tools.tavily.search(query, max_results=3)
             all_results.extend(results)
             logger.debug(f"  Found {len(results)} results")
@@ -215,7 +246,18 @@ SEARCH QUERIES:
         set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
         logger.info("=== SEARCHING ARXIV ===")
 
+        # Validate topic
         topic: str = state["topic"]
+        try:
+            topic = validate_topic(topic)
+        except ValidationError as e:
+            logger.error(f"Invalid topic for ArXiv search: {e}")
+            return {
+                "arxiv_papers": [],
+                "step_count": state["step_count"] + 1,
+                "status": "arxiv_searched",
+            }
+
         papers: list[dict[str, Any]] = self.tools.arxiv.search(
             topic, max_results=Config.MAX_ARXIV_RESULTS
         )
@@ -317,7 +359,13 @@ SEARCH QUERIES:
         set_logging_context(request_id=state.get("request_id"), topic=state.get("topic"))
         logger.info("=== RETRIEVING AND SYNTHESIZING ===")
 
+        # Validate topic
         topic: str = state["topic"]
+        try:
+            topic = validate_topic(topic)
+        except ValidationError as e:
+            logger.error(f"Invalid topic for synthesis: {e}")
+            raise
 
         # Retrieve relevant chunks
         logger.debug("Retrieving relevant context...")
@@ -381,6 +429,13 @@ Please write a comprehensive, well-organized research report (aim for 800-1500 w
             Final state with synthesis
         """
         from agent.state import create_initial_state
+
+        # Validate and sanitize topic before creating state
+        try:
+            topic = validate_topic(topic)
+        except ValidationError as e:
+            logger.error(f"Invalid research topic: {e}")
+            raise
 
         # Create initial state
         initial_state: ResearchState = create_initial_state(topic)

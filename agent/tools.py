@@ -21,6 +21,7 @@ from langchain_core.tools import Tool
 from tavily import TavilyClient
 
 from agent.logger import get_logger
+from agent.validation import ValidationError, validate_query, validate_url, validate_urls
 from config import Config
 
 logger = get_logger("tools")
@@ -44,6 +45,13 @@ class TavilySearchTool:
             List of search results with title, url, content, and score
         """
         try:
+            # Validate and sanitize query
+            try:
+                query = validate_query(query)
+            except ValidationError as e:
+                logger.error(f"Invalid search query: {e}")
+                return []
+
             max_results_value: int = max_results or Config.MAX_SEARCH_RESULTS
             response: dict[str, Any] = self.client.search(
                 query=query,
@@ -98,6 +106,21 @@ class WebScraperTool:
             Dictionary with url, title, content, and metadata
         """
         try:
+            # Validate and sanitize URL
+            try:
+                url = validate_url(url)
+            except ValidationError as e:
+                logger.error(f"Invalid URL: {e}")
+                return {
+                    "url": url,
+                    "title": "",
+                    "content": "",
+                    "word_count": 0,
+                    "source": "web_scrape",
+                    "success": False,
+                    "error": str(e),
+                }
+
             response: requests.Response = requests.get(url, headers=self.headers, timeout=10)
             response.raise_for_status()
 
@@ -183,6 +206,13 @@ class WebScraperTool:
         Returns:
             List of scraped content dictionaries
         """
+        # Validate and sanitize URLs
+        try:
+            urls = validate_urls(urls, max_urls=max_urls or Config.MAX_SCRAPE_URLS)
+        except ValidationError as e:
+            logger.error(f"Invalid URLs: {e}")
+            return []
+
         max_urls_value: int = max_urls or Config.MAX_SCRAPE_URLS
         results: list[dict[str, Any]] = []
 
@@ -217,6 +247,13 @@ class ArxivSearchTool:
             List of paper metadata
         """
         try:
+            # Validate and sanitize query
+            try:
+                query = validate_query(query)
+            except ValidationError as e:
+                logger.error(f"Invalid ArXiv search query: {e}")
+                return []
+
             max_results_value: int = max_results or Config.MAX_ARXIV_RESULTS
 
             search: arxiv.Search = arxiv.Search(
@@ -267,6 +304,20 @@ class PDFProcessorTool:
             Dictionary with extracted content
         """
         try:
+            # Validate and sanitize URL
+            try:
+                url = validate_url(url)
+            except ValidationError as e:
+                logger.error(f"Invalid PDF URL: {e}")
+                return {
+                    "url": url,
+                    "content": "",
+                    "page_count": 0,
+                    "source": "pdf",
+                    "success": False,
+                    "error": str(e),
+                }
+
             headers: dict[str, str] = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             }

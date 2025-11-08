@@ -14,6 +14,7 @@ import streamlit as st
 
 from agent.graph import create_research_graph
 from agent.state import ResearchState
+from agent.validation import ValidationError, sanitize_filename, validate_topic
 from config import Config
 
 # Page configuration
@@ -196,7 +197,9 @@ def display_research_results(state: ResearchState) -> None:
 
         # Download button
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"research_report_{timestamp}.md"
+        # Sanitize topic for filename
+        safe_topic = sanitize_filename(state.get("topic", "research")[:30])
+        filename = f"research_report_{safe_topic}_{timestamp}.md"
         st.download_button(
             label="📥 Download Report",
             data=synthesis,
@@ -284,6 +287,13 @@ def display_research_results(state: ResearchState) -> None:
 def run_research(topic: str) -> ResearchState | None:
     """Execute research workflow"""
     try:
+        # Validate and sanitize topic input
+        try:
+            topic = validate_topic(topic)
+        except ValidationError as e:
+            st.error(f"Invalid topic: {str(e)}")
+            return None
+
         # Validate configuration
         Config.validate()
 
@@ -325,8 +335,14 @@ def main() -> None:
 
     # Execute research
     if start_button and topic:
-        st.session_state.research_results = None  # Clear previous results
-        final_state = run_research(topic)
+        # Validate topic before processing
+        try:
+            topic = validate_topic(topic)
+            st.session_state.research_results = None  # Clear previous results
+            final_state = run_research(topic)
+        except ValidationError as e:
+            st.error(f"Invalid topic: {str(e)}")
+            final_state = None
 
         if final_state:
             st.success("✅ Research completed successfully!")
