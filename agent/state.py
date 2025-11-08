@@ -3,14 +3,15 @@ LangGraph State Definition for Autonomous Research Agent
 """
 
 import uuid
-from typing import TypedDict, List, Dict, Any, Optional
+from typing import Any, TypedDict
+
 from langchain_core.messages import BaseMessage
 
 
 class ResearchState(TypedDict):
     """
     State structure for the research agent workflow.
-    
+
     Attributes:
         topic: The research topic provided by the user
         request_id: Unique identifier for this research request
@@ -28,37 +29,41 @@ class ResearchState(TypedDict):
         step_count: Number of steps taken (to prevent infinite loops)
         status: Current status of the research process
     """
+
     topic: str
     request_id: str
-    research_plan: Optional[str]
-    search_queries: List[str]
-    search_results: List[Dict[str, Any]]
-    scraped_content: List[Dict[str, Any]]
-    arxiv_papers: List[Dict[str, Any]]
-    pdf_content: List[Dict[str, Any]]
-    all_documents: List[Dict[str, Any]]
-    vector_store_id: Optional[str]
-    retrieved_chunks: List[Dict[str, Any]]
-    synthesis: Optional[str]
-    messages: List[BaseMessage]
+    research_plan: str | None
+    search_queries: list[str]
+    search_results: list[dict[str, Any]]
+    scraped_content: list[dict[str, Any]]
+    arxiv_papers: list[dict[str, Any]]
+    pdf_content: list[dict[str, Any]]
+    all_documents: list[dict[str, Any]]
+    vector_store_id: str | None
+    retrieved_chunks: list[dict[str, Any]]
+    synthesis: str | None
+    messages: list[BaseMessage]
     step_count: int
     status: str
 
 
-def create_initial_state(topic: str, request_id: Optional[str] = None) -> ResearchState:
+def create_initial_state(topic: str, request_id: str | None = None) -> ResearchState:
     """
     Create initial state for a new research task.
-    
+
     Args:
         topic: The research topic
         request_id: Optional request ID (generated if not provided)
-        
+
     Returns:
         Initial ResearchState
     """
     if request_id is None:
-        request_id: str = str(uuid.uuid4())
-    
+        request_id = str(uuid.uuid4())
+
+    # Ensure request_id is a string (not None) for TypedDict
+    request_id_str: str = request_id
+
     return ResearchState(
         topic=topic,
         research_plan=None,
@@ -74,6 +79,5 @@ def create_initial_state(topic: str, request_id: Optional[str] = None) -> Resear
         messages=[],
         step_count=0,
         status="initialized",
-        request_id=request_id
+        request_id=request_id_str,
     )
-

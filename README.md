@@ -232,6 +232,53 @@ rm -rf chroma_db/
 ### Model Not Found
 Ensure you have internet connection for downloading embedding models on first run.
 
+## Code Quality
+
+This project uses several code quality tools to maintain consistent code style and catch potential issues:
+
+- **black**: Code formatter
+- **isort**: Import sorter
+- **ruff**: Fast linter and formatter
+- **mypy**: Static type checker
+
+### Installation
+
+Install the development dependencies:
+
+```bash
+pip install -e ".[dev]"
+```
+
+### Usage
+
+**Format code with black:**
+```bash
+black .
+```
+
+**Sort imports with isort:**
+```bash
+isort .
+```
+
+**Lint and format with ruff:**
+```bash
+ruff check .
+ruff format .
+```
+
+**Type check with mypy:**
+```bash
+mypy .
+```
+
+**Run all checks:**
+```bash
+black . && isort . && ruff check . && ruff format . && mypy .
+```
+
+All tools are configured in `pyproject.toml` with sensible defaults for Python 3.11+.
+
 ## Future Enhancements
 
 - [ ] Support for more LLM providers (OpenAI, Anthropic, etc.)

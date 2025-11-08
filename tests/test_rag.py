@@ -1,11 +1,11 @@
 import os
+from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
 import numpy as np
+import pytest
 
 from agent.rag import RAGPipeline
-from typing import Dict, Any, List
 from config import Config
 
 
@@ -17,9 +17,14 @@ def temp_chroma_dir(tmp_path, monkeypatch):
     return tmp
 
 
-def test_chunk_documents_creates_chunks_with_metadata(temp_chroma_dir, monkeypatch) -> None:
+def test_chunk_documents_creates_chunks_with_metadata(
+    temp_chroma_dir,  # noqa: ARG001
+) -> None:
     # Mock heavy components
-    with patch("agent.rag.SentenceTransformer") as ST, patch("agent.rag.chromadb.PersistentClient") as PC:
+    with (
+        patch("agent.rag.SentenceTransformer") as ST,
+        patch("agent.rag.chromadb.PersistentClient") as PC,
+    ):
         ST.return_value = MagicMock(encode=MagicMock(return_value=[[0.1, 0.2]]))
         fake_collection = MagicMock()
         PC.return_value.get_collection.side_effect = Exception("no collection")
@@ -27,16 +32,21 @@ def test_chunk_documents_creates_chunks_with_metadata(temp_chroma_dir, monkeypat
 
         rag = RAGPipeline(collection_name="test_collection")
 
-    docs: List[Dict[str, Any]] = [{"content": "A " * 600, "title": "T", "url": "u", "source": "web"}]
-    chunks: List[Dict[str, Any]] = rag.chunk_documents(docs)
+    docs: list[dict[str, Any]] = [
+        {"content": "A " * 600, "title": "T", "url": "u", "source": "web"}
+    ]
+    chunks: list[dict[str, Any]] = rag.chunk_documents(docs)
 
     assert len(chunks) > 1
     assert all("id" in c and "text" in c for c in chunks)
     assert all(c["source"] == "web" for c in chunks)
 
 
-def test_embed_chunks_uses_embedding_model(temp_chroma_dir, monkeypatch) -> None:
-    with patch("agent.rag.SentenceTransformer") as ST, patch("agent.rag.chromadb.PersistentClient") as PC:
+def test_embed_chunks_uses_embedding_model(temp_chroma_dir) -> None:  # noqa: ARG001
+    with (
+        patch("agent.rag.SentenceTransformer") as ST,
+        patch("agent.rag.chromadb.PersistentClient") as PC,
+    ):
         st_instance = MagicMock()
         st_instance.encode.return_value = np.array([[0.1, 0.2, 0.3]])
         ST.return_value = st_instance
@@ -46,23 +56,28 @@ def test_embed_chunks_uses_embedding_model(temp_chroma_dir, monkeypatch) -> None
 
         rag = RAGPipeline(collection_name="test_collection")
 
-    chunks: List[Dict[str, Any]] = [{"text": "hello"}]
-    vectors: List[List[float]] = rag.embed_chunks(chunks)
+    chunks: list[dict[str, Any]] = [{"text": "hello"}]
+    vectors: list[list[float]] = rag.embed_chunks(chunks)
 
     assert vectors == [[0.1, 0.2, 0.3]]
     ST.return_value.encode.assert_called_once()
 
 
-def test_store_documents_adds_to_chroma(temp_chroma_dir, monkeypatch) -> None:
-    with patch("agent.rag.SentenceTransformer") as ST, patch("agent.rag.chromadb.PersistentClient") as PC:
-        ST.return_value = MagicMock(encode=MagicMock(return_value=np.array([[0.1, 0.2], [0.2, 0.3]])))
+def test_store_documents_adds_to_chroma(temp_chroma_dir) -> None:  # noqa: ARG001
+    with (
+        patch("agent.rag.SentenceTransformer") as ST,
+        patch("agent.rag.chromadb.PersistentClient") as PC,
+    ):
+        ST.return_value = MagicMock(
+            encode=MagicMock(return_value=np.array([[0.1, 0.2], [0.2, 0.3]]))
+        )
         fake_collection = MagicMock()
         PC.return_value.get_collection.side_effect = Exception("no collection")
         PC.return_value.create_collection.return_value = fake_collection
 
         rag = RAGPipeline(collection_name="test_collection")
 
-    docs: List[Dict[str, Any]] = [
+    docs: list[dict[str, Any]] = [
         {"content": "word " * 1200, "title": "Doc1", "url": "u1", "source": "web"},
     ]
     count: int = rag.store_documents(docs)
@@ -71,8 +86,13 @@ def test_store_documents_adds_to_chroma(temp_chroma_dir, monkeypatch) -> None:
     assert fake_collection.add.called
 
 
-def test_retrieve_formats_results_and_similarity(temp_chroma_dir, monkeypatch) -> None:
-    with patch("agent.rag.SentenceTransformer") as ST, patch("agent.rag.chromadb.PersistentClient") as PC:
+def test_retrieve_formats_results_and_similarity(
+    temp_chroma_dir,  # noqa: ARG001
+) -> None:
+    with (
+        patch("agent.rag.SentenceTransformer") as ST,
+        patch("agent.rag.chromadb.PersistentClient") as PC,
+    ):
         ST.return_value = MagicMock(encode=MagicMock(return_value=np.array([[0.9, 0.1, 0.0]])))
         fake_collection = MagicMock()
         fake_collection.query.return_value = {
@@ -86,12 +106,10 @@ def test_retrieve_formats_results_and_similarity(temp_chroma_dir, monkeypatch) -
 
         rag = RAGPipeline(collection_name="test_collection")
 
-    out: List[Dict[str, Any]] = rag.retrieve("query", top_k=2)
+    out: list[dict[str, Any]] = rag.retrieve("query", top_k=2)
     assert len(out) == 2
     assert out[0]["similarity_score"] == pytest.approx(0.8)
     assert out[0]["metadata"]["title"] == "A"
 
     ctx = rag.format_retrieved_context(out)
     assert "[Source 1: A]" in ctx
-
-

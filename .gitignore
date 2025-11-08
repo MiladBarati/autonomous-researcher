@@ -29,6 +29,12 @@ logs/
 *.swp
 *.swo
 
+# Code quality tools
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
 # OS
 .DS_Store
 Thumbs.db

@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -5,22 +6,22 @@ import pytest
 from agent.graph import ResearchAgent
 
 
-from typing import Any, List
-
-
 class DummyLLM:
     def __init__(self, content: str):
         self._content: str = content
 
-    def invoke(self, messages: List[Any]) -> Any:
+    def invoke(self, _messages: list[Any]) -> Any:
         return type("Resp", (), {"content": self._content})
 
 
 @pytest.fixture()
 def agent_with_stubs(monkeypatch):
     # Stub get_llm to avoid API validation
-    monkeypatch.setattr("agent.graph.get_llm", lambda: DummyLLM(
-        "RESEARCH PLAN:\nPlan\n\nSEARCH QUERIES:\n1. foo\n2. bar\n"), raising=False)
+    monkeypatch.setattr(
+        "agent.graph.get_llm",
+        lambda: DummyLLM("RESEARCH PLAN:\nPlan\n\nSEARCH QUERIES:\n1. foo\n2. bar\n"),
+        raising=False,
+    )
 
     # Stub RAGPipeline used inside ResearchAgent
     with patch("agent.graph.RAGPipeline") as RAG:
@@ -37,18 +38,12 @@ def agent_with_stubs(monkeypatch):
         agent = ResearchAgent()
 
         # Replace llm for synthesis step too
-        agent.llm = DummyLLM("SYNTHESIS TEXT")
+        agent.llm = DummyLLM("SYNTHESIS TEXT")  # type: ignore[assignment]
 
         # Stub tools to deterministic outputs
-        agent.tools.tavily.search = MagicMock(return_value=[
-            {"title": "A", "url": "http://a", "content": "c", "score": 1.0}
-        ])
-        agent.tools.scraper.scrape_multiple = MagicMock(return_value=[
-            {"title": "A", "url": "http://a", "content": "content", "source": "web_scrape", "success": True}
-        ])
-        agent.tools.arxiv.search = MagicMock(return_value=[
-            {"title": "Paper", "authors": ["X"], "summary": "sum", "url": "u", "pdf_url": "pu"}
-        ])
+        agent.tools.tavily.search = MagicMock(return_value=[{"title": "A", "url": "http://a", "content": "c", "score": 1.0}])
+        agent.tools.scraper.scrape_multiple = MagicMock(return_value=[{"title": "A", "url": "http://a", "content": "content", "source": "web_scrape", "success": True}])
+        agent.tools.arxiv.search = MagicMock(return_value=[{"title": "Paper", "authors": ["X"], "summary": "sum", "url": "u", "pdf_url": "pu"}])
 
     return agent
 
@@ -72,6 +67,3 @@ def test_full_graph_flow_completes(agent_with_stubs):
     assert "SYNTHESIS TEXT" in final_state["synthesis"]
     # Steps: plan, search_web, scrape, arxiv, process, store, retrieve = 7
     assert final_state["step_count"] >= 7
-
-
-
