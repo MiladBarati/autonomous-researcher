@@ -36,6 +36,7 @@ logs/
 dmypy.json
 .coverage
 .pre-commit/
+bandit-report.json
 
 # OS
 .DS_Store
