@@ -178,10 +178,18 @@ def test_scrape_content_filters_urls(agent_with_stubs: Any) -> None:
 
 
 def test_search_arxiv_handles_empty_topic(agent_with_stubs: Any) -> None:
-    """Test that search_arxiv handles empty topic"""
+    """Test that search_arxiv handles empty topic by returning empty results"""
     from agent.state import create_initial_state
+    from agent.validation import ValidationError
 
-    state = create_initial_state("")
+    # Empty topic should raise ValidationError when creating state
+    with pytest.raises(ValidationError):
+        create_initial_state("")
+    
+    # Test with a valid but minimal topic instead
+    state = create_initial_state("test")
+    # Mock validation to pass but return empty results
+    agent_with_stubs.tools.arxiv.search = MagicMock(return_value=[])
     out = agent_with_stubs.search_arxiv(state)
 
     assert out["status"] == "arxiv_searched"
@@ -259,3 +267,101 @@ def test_create_research_graph_factory(agent_with_stubs: Any) -> None:  # noqa: 
     ):
         agent = create_research_graph()
         assert isinstance(agent, ResearchAgent)
+
+
+def test_plan_research_handles_invalid_topic(agent_with_stubs: Any) -> None:
+    """Test that plan_research handles invalid topic"""
+    from agent.state import create_initial_state
+    from agent.validation import ValidationError
+
+    # Create state with valid topic first
+    state = create_initial_state("test")
+    # Manually set invalid topic to trigger validation error in plan_research
+    state["topic"] = "ab"  # Too short
+    
+    with pytest.raises(ValidationError):
+        agent_with_stubs.plan_research(state)
+
+
+def test_plan_research_handles_invalid_queries(agent_with_stubs: Any) -> None:
+    """Test that plan_research handles invalid queries in LLM response"""
+    from agent.state import create_initial_state
+
+    # Mock LLM to return queries with dangerous patterns
+    agent_with_stubs.llm = DummyLLM(
+        "RESEARCH PLAN:\nPlan\n\nSEARCH QUERIES:\n1. <script>alert('xss')</script>\n2. valid query"
+    )
+
+    state = create_initial_state("Test Topic")
+    out = agent_with_stubs.plan_research(state)
+
+    # Should skip invalid query and keep valid ones
+    assert len(out["search_queries"]) >= 1
+    assert out["status"] == "planned"
+
+
+def test_plan_research_fallback_when_all_queries_invalid(agent_with_stubs: Any) -> None:
+    """Test that plan_research uses fallback when all queries are invalid"""
+    from agent.state import create_initial_state
+
+    # Mock LLM to return only invalid queries
+    agent_with_stubs.llm = DummyLLM(
+        "RESEARCH PLAN:\nPlan\n\nSEARCH QUERIES:\n1. <script>alert('xss')</script>"
+    )
+
+    state = create_initial_state("Test Topic")
+    out = agent_with_stubs.plan_research(state)
+
+    # Should have fallback queries
+    assert len(out["search_queries"]) >= 1
+    assert out["status"] == "planned"
+
+
+def test_search_web_handles_invalid_queries(agent_with_stubs: Any) -> None:
+    """Test that search_web handles invalid queries"""
+    from agent.state import create_initial_state
+
+    state = create_initial_state("Test Topic")
+    state["search_queries"] = ["valid query", "<script>alert('xss')</script>", "another valid"]
+
+    out = agent_with_stubs.search_web(state)
+
+    # Should skip invalid query
+    assert out["status"] == "searched"
+    # Should only process valid queries
+    assert agent_with_stubs.tools.tavily.search.call_count <= 2
+
+
+def test_search_arxiv_handles_invalid_topic(agent_with_stubs: Any) -> None:
+    """Test that search_arxiv handles invalid topic gracefully"""
+    from agent.state import create_initial_state
+
+    state = create_initial_state("test")
+    # Set topic to invalid value (too short)
+    state["topic"] = "ab"
+
+    out = agent_with_stubs.search_arxiv(state)
+
+    # Should return empty results without crashing
+    assert out["status"] == "arxiv_searched"
+    assert out["arxiv_papers"] == []
+
+
+def test_retrieve_and_synthesize_handles_invalid_topic(agent_with_stubs: Any) -> None:
+    """Test that retrieve_and_synthesize handles invalid topic"""
+    from agent.state import create_initial_state
+    from agent.validation import ValidationError
+
+    state = create_initial_state("test")
+    state["topic"] = "ab"  # Too short
+
+    with pytest.raises(ValidationError):
+        agent_with_stubs.retrieve_and_synthesize(state)
+
+
+def test_research_method_handles_invalid_topic(agent_with_stubs: Any) -> None:
+    """Test that research method handles invalid topic"""
+    from agent.validation import ValidationError
+
+    with pytest.raises(ValidationError):
+        agent_with_stubs.research("ab")  # Too short

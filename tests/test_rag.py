@@ -369,3 +369,40 @@ def test_create_rag_pipeline_factory(temp_chroma_dir: Any) -> None:  # noqa: ARG
 
         rag = create_rag_pipeline(collection_name="custom_collection")
         assert rag.collection_name == "custom_collection"
+
+
+def test_retrieve_handles_invalid_query(temp_chroma_dir: Any) -> None:  # noqa: ARG001
+    """Test that retrieve handles invalid query"""
+    with (
+        patch("agent.rag.SentenceTransformer") as ST,
+        patch("agent.rag.chromadb.PersistentClient") as PC,
+    ):
+        ST.return_value = MagicMock(encode=MagicMock(return_value=[[0.1, 0.2]]))
+        fake_collection = MagicMock()
+        PC.return_value.get_collection.side_effect = Exception("no collection")
+        PC.return_value.create_collection.return_value = fake_collection
+
+        rag = RAGPipeline(collection_name="test_collection")
+
+    # Empty query should trigger validation error
+    out: list[dict[str, Any]] = rag.retrieve("")
+    assert len(out) == 0
+
+
+def test_clear_collection_handles_error(temp_chroma_dir: Any) -> None:  # noqa: ARG001
+    """Test that clear_collection handles errors gracefully"""
+    with (
+        patch("agent.rag.SentenceTransformer") as ST,
+        patch("agent.rag.chromadb.PersistentClient") as PC,
+    ):
+        ST.return_value = MagicMock(encode=MagicMock(return_value=[[0.1, 0.2]]))
+        fake_collection = MagicMock()
+        PC.return_value.get_collection.side_effect = Exception("no collection")
+        PC.return_value.create_collection.return_value = fake_collection
+        PC.return_value.delete_collection.side_effect = Exception("delete error")
+
+        rag = RAGPipeline(collection_name="test_collection")
+        # Should not raise, but log error
+        rag.clear_collection()
+        # Collection should still exist (recreated)
+        assert rag.collection is not None

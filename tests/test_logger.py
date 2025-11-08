@@ -148,3 +148,29 @@ def test_console_formatter_includes_context() -> None:
     assert "console-123" in formatted
     assert "console topic" in formatted
     assert "Test message" in formatted
+
+
+def test_contextual_formatter_includes_extra_fields() -> None:
+    """Test that ContextualFormatter includes extra fields"""
+    from agent.logger import ContextualFormatter
+
+    formatter = ContextualFormatter()
+    record = logging.LogRecord(
+        name="test",
+        level=logging.INFO,
+        pathname="test.py",
+        lineno=1,
+        msg="Test message",
+        args=(),
+        exc_info=None,
+    )
+    # Add extra field
+    record.extra = {"custom_field": "custom_value"}
+
+    set_logging_context(request_id="extra-123", topic="extra topic")
+    formatted = formatter.format(record)
+    log_data = json.loads(formatted)
+
+    assert log_data["request_id"] == "extra-123"
+    assert log_data["topic"] == "extra topic"
+    assert log_data["custom_field"] == "custom_value"

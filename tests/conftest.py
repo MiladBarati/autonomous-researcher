@@ -338,7 +338,7 @@ if "bs4" not in sys.modules and importlib.util.find_spec("bs4") is None:
         def __init__(self, content: Any, _parser: Any) -> None:
             self._content = content
 
-        def find(self, name: str) -> _Tag | "_Soup" | None:
+        def find(self, name: str) -> _Tag | None:
             if name == "title":
                 return _Tag("Stub Title")
             if name in ("main", "article", "body"):

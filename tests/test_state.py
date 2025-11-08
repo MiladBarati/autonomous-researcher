@@ -2,6 +2,8 @@
 
 import uuid
 
+import pytest
+
 from agent.state import create_initial_state
 
 
@@ -68,14 +70,17 @@ def test_research_state_structure() -> None:
 
 
 def test_create_initial_state_empty_topic() -> None:
-    """Test creating initial state with empty topic"""
-    state = create_initial_state("")
-    assert state["topic"] == ""
-    assert state["status"] == "initialized"
+    """Test creating initial state with empty topic raises ValidationError"""
+    from agent.validation import ValidationError
+
+    with pytest.raises(ValidationError, match="Topic cannot be empty"):
+        create_initial_state("")
 
 
 def test_create_initial_state_long_topic() -> None:
-    """Test creating initial state with long topic"""
+    """Test creating initial state with long topic raises ValidationError"""
+    from agent.validation import ValidationError
+
     long_topic = "A" * 1000
-    state = create_initial_state(long_topic)
-    assert state["topic"] == long_topic
+    with pytest.raises(ValidationError, match="Topic must be at most"):
+        create_initial_state(long_topic)
