@@ -301,6 +301,49 @@ black . ; isort . ; ruff check . ; ruff format . ; mypy .
 
 All tools are configured in `pyproject.toml` with sensible defaults for Python 3.11+.
 
+## Documentation
+
+API documentation is generated using Sphinx with autodoc. The documentation includes detailed API references for all modules, classes, and functions.
+
+### Building Documentation
+
+First, ensure you have the development dependencies installed:
+
+```bash
+pip install -e ".[dev]"
+```
+
+Then, build the documentation:
+
+**Using Make (Linux/macOS):**
+```bash
+cd docs
+make html
+```
+
+**Using Sphinx directly (Windows/Cross-platform):**
+```bash
+cd docs
+sphinx-build -b html . _build/html
+```
+
+The generated HTML documentation will be in `docs/_build/html/`. Open `index.html` in your browser to view it.
+
+### Documentation Structure
+
+- `docs/index.rst` - Main documentation index
+- `docs/installation.rst` - Installation instructions
+- `docs/quickstart.rst` - Quick start guide
+- `docs/api/` - API reference documentation
+  - `modules.rst` - All modules overview
+  - `agent.rst` - Agent and graph documentation
+  - `config.rst` - Configuration documentation
+- `docs/examples.rst` - Usage examples
+
+### Viewing Documentation Locally
+
+After building, you can view the documentation by opening `docs/_build/html/index.html` in your web browser.
+
 ## Future Enhancements
 
 - [ ] Support for more LLM providers (OpenAI, Anthropic, etc.)
