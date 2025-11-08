@@ -34,6 +34,7 @@ logs/
 .ruff_cache/
 .dmypy.json
 dmypy.json
+.coverage
 
 # OS
 .DS_Store
