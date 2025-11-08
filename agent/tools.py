@@ -31,7 +31,8 @@ class TavilySearchTool:
     """Web search using Tavily API"""
 
     def __init__(self) -> None:
-        self.client: TavilyClient = TavilyClient(api_key=Config.TAVILY_API_KEY)
+        api_key = Config.TAVILY_API_KEY.get_secret_value() if Config.TAVILY_API_KEY else None
+        self.client: TavilyClient = TavilyClient(api_key=api_key)
 
     def search(self, query: str, max_results: int | None = None) -> list[dict[str, Any]]:
         """

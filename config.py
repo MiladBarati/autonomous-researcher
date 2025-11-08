@@ -16,10 +16,14 @@ class Config:
     """Configuration class for the research assistant"""
 
     # API Keys
-    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
-    LANGCHAIN_API_KEY: str = os.getenv("LANGCHAIN_API_KEY", "")
-    LANGSMITH_API_KEY: str = os.getenv("LANGSMITH_API_KEY", "")
+    _groq_key: str = os.getenv("GROQ_API_KEY", "")
+    GROQ_API_KEY: SecretStr | None = SecretStr(_groq_key) if _groq_key else None
+    _tavily_key: str = os.getenv("TAVILY_API_KEY", "")
+    TAVILY_API_KEY: SecretStr | None = SecretStr(_tavily_key) if _tavily_key else None
+    _langchain_key: str = os.getenv("LANGCHAIN_API_KEY", "")
+    LANGCHAIN_API_KEY: SecretStr | None = SecretStr(_langchain_key) if _langchain_key else None
+    _langsmith_key: str = os.getenv("LANGSMITH_API_KEY", "")
+    LANGSMITH_API_KEY: SecretStr | None = SecretStr(_langsmith_key) if _langsmith_key else None
 
     # LangSmith Tracing
     LANGSMITH_TRACING: str = os.getenv("LANGSMITH_TRACING", "true")
@@ -57,7 +61,11 @@ class Config:
             "TAVILY_API_KEY": cls.TAVILY_API_KEY,
         }
 
-        missing_keys = [key for key, value in required_keys.items() if not value]
+        missing_keys = [
+            key
+            for key, value in required_keys.items()
+            if value is None or (isinstance(value, SecretStr) and not value.get_secret_value())
+        ]
 
         if missing_keys:
             raise ValueError(f"Missing required API keys: {', '.join(missing_keys)}")
@@ -79,7 +87,7 @@ def get_llm(temperature: float | None = None, max_tokens: int | None = None) -> 
     Config.validate()
 
     return ChatGroq(
-        api_key=SecretStr(Config.GROQ_API_KEY) if Config.GROQ_API_KEY else None,
+        api_key=Config.GROQ_API_KEY,
         model=Config.MODEL_NAME,
         temperature=temperature or Config.MODEL_TEMPERATURE,
         max_tokens=max_tokens or Config.MAX_TOKENS,
@@ -90,5 +98,10 @@ def get_llm(temperature: float | None = None, max_tokens: int | None = None) -> 
 if Config.LANGSMITH_TRACING.lower() == "true":
     os.environ["LANGCHAIN_TRACING_V2"] = "true"
     os.environ["LANGCHAIN_ENDPOINT"] = Config.LANGSMITH_ENDPOINT
-    os.environ["LANGCHAIN_API_KEY"] = Config.LANGSMITH_API_KEY or Config.LANGCHAIN_API_KEY
+    langchain_api_key = (
+        Config.LANGSMITH_API_KEY.get_secret_value()
+        if Config.LANGSMITH_API_KEY
+        else (Config.LANGCHAIN_API_KEY.get_secret_value() if Config.LANGCHAIN_API_KEY else "")
+    )
+    os.environ["LANGCHAIN_API_KEY"] = langchain_api_key
     os.environ["LANGCHAIN_PROJECT"] = Config.LANGSMITH_PROJECT
