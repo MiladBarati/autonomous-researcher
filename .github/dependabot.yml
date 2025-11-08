@@ -10,16 +10,17 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
+    # Prioritize security updates
     open-pull-requests-limit: 10
-    reviewers:
-      - "yourusername"  # Replace with actual GitHub username
+    # Security updates are always created immediately, regardless of schedule
     labels:
       - "dependencies"
       - "python"
+      - "security"
     commit-message:
       prefix: "chore"
       include: "scope"
-    # Group updates to reduce PR noise
+    # Group updates to reduce PR noise while maintaining security focus
     groups:
       dev-dependencies:
         patterns:
@@ -30,15 +31,23 @@ updates:
           - "mypy"
           - "pre-commit"
           - "types-*"
+        update-types:
+          - "minor"
+          - "patch"
       langchain-dependencies:
         patterns:
           - "langchain*"
           - "langgraph*"
+        update-types:
+          - "minor"
+          - "patch"
       core-dependencies:
         dependency-type: "production"
         update-types:
           - "minor"
           - "patch"
+    # Note: Security updates are automatically created immediately by Dependabot,
+    # regardless of schedule or grouping, and will bypass these limits
 
   # Enable version updates for GitHub Actions
   - package-ecosystem: "github-actions"
@@ -49,6 +58,8 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
+      - "security"
     commit-message:
       prefix: "ci"
       include: "scope"
+    # Note: Security updates for actions are automatically created immediately
