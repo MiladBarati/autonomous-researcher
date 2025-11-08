@@ -34,9 +34,11 @@ class ResearchAgent:
         self.llm: ChatGroq = get_llm()
         self.tools: ToolManager = ToolManager()
         self.rag: RAGPipeline = RAGPipeline()
-        self.graph: Any = self._build_graph()  # CompiledGraph type not available in stubs
+        # Note: Using Any because langgraph doesn't have complete type stubs for CompiledGraph
+        self.graph: Any = self._build_graph()
 
-    def _build_graph(self) -> Any:  # Returns CompiledGraph, but type not in stubs
+    def _build_graph(self) -> Any:
+        # Note: Returns CompiledGraph, but langgraph doesn't have complete type stubs
         """Build the LangGraph state machine"""
 
         # Create state graph

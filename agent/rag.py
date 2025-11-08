@@ -7,7 +7,7 @@ using ChromaDB and sentence-transformers.
 
 import hashlib
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import chromadb
 from chromadb import Collection
@@ -17,7 +17,10 @@ from sentence_transformers import SentenceTransformer
 try:
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 except ImportError:
-    from langchain.text_splitter import RecursiveCharacterTextSplitter  # type: ignore[no-redef]
+    # Fallback for older langchain versions
+    from langchain.text_splitter import (  # type: ignore[no-redef]
+        RecursiveCharacterTextSplitter,
+    )
 
 from agent.logger import get_logger
 from agent.validation import ValidationError, validate_query
@@ -59,6 +62,7 @@ class RAGPipeline:
         self.embedding_model: SentenceTransformer = SentenceTransformer(Config.EMBEDDING_MODEL)
 
         # Initialize ChromaDB client
+        # Note: Using Any because chromadb doesn't have complete type stubs
         self.client: Any = chromadb.PersistentClient(
             path=Config.CHROMA_PERSIST_DIR,
             settings=Settings(anonymized_telemetry=False, allow_reset=True),
@@ -70,15 +74,17 @@ class RAGPipeline:
     def _get_or_create_collection(self) -> Collection:
         """Get existing collection or create new one"""
         try:
-            collection: Any = self.client.get_collection(name=self.collection_name)
+            collection = self.client.get_collection(name=self.collection_name)
             logger.debug(f"Using existing collection: {self.collection_name}")
+            # ChromaDB doesn't have complete type stubs, so we use cast
+            return cast(Collection, collection)
         except Exception:
             collection = self.client.create_collection(
                 name=self.collection_name, metadata={"hnsw:space": "cosine"}
             )
             logger.info(f"Created new collection: {self.collection_name}")
-
-        return collection  # type: ignore[no-any-return]
+            # ChromaDB doesn't have complete type stubs, so we use cast
+            return cast(Collection, collection)
 
     def chunk_documents(self, documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
@@ -140,7 +146,12 @@ class RAGPipeline:
         embeddings = self.embedding_model.encode(
             texts, show_progress_bar=False, convert_to_numpy=True
         )
-        return embeddings.tolist()  # type: ignore[no-any-return]
+        # encode returns numpy array, convert to list of lists
+        # sentence_transformers doesn't have complete type stubs, so we use cast
+        if hasattr(embeddings, "tolist"):
+            return cast(list[list[float]], embeddings.tolist())
+        # Fallback: if not numpy array, assume it's already the right type
+        return cast(list[list[float]], embeddings)
 
     def store_documents(self, documents: list[dict[str, Any]]) -> int:
         """
@@ -184,11 +195,12 @@ class RAGPipeline:
 
         # Store in ChromaDB
         logger.debug("Storing in ChromaDB...")
-        # Convert embeddings and metadatas to compatible types
-        embeddings_any: Any = embeddings
-        metadatas_any: Any = metadatas
+        # Note: Using Any for ChromaDB.add() because chromadb doesn't have complete type stubs
         self.collection.add(
-            ids=ids, embeddings=embeddings_any, documents=texts, metadatas=metadatas_any
+            ids=ids,
+            embeddings=cast(Any, embeddings),
+            documents=texts,
+            metadatas=cast(Any, metadatas),
         )
 
         logger.info(f"Successfully stored {len(chunks)} chunks")
@@ -215,14 +227,15 @@ class RAGPipeline:
         top_k_value: int = top_k or Config.TOP_K_RESULTS
 
         # Generate query embedding
-        query_embedding: list[float] = self.embedding_model.encode(
+        query_embedding_raw = self.embedding_model.encode(
             [query], show_progress_bar=False, convert_to_numpy=True
-        ).tolist()[0]
+        )
+        query_embedding: list[float] = cast(list[list[float]], query_embedding_raw.tolist())[0]
 
         # Query ChromaDB
-        query_embeddings_any: Any = [query_embedding]
+        # Note: Using Any for ChromaDB.query() because chromadb doesn't have complete type stubs
         results: Any = self.collection.query(
-            query_embeddings=query_embeddings_any,
+            query_embeddings=cast(Any, [query_embedding]),
             n_results=top_k_value,
             include=["documents", "metadatas", "distances"],
         )
