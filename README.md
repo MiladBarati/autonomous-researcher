@@ -1,5 +1,8 @@
 # Autonomous Research Assistant
 
+[![Coverage](https://img.shields.io/badge/coverage-80%25-brightgreen)](https://github.com/miladbarati/autonomous-researcher)
+[![CodeQL](https://github.com/miladbarati/autonomous-research-assistant/actions/workflows/codeql.yml/badge.svg)](https://github.com/miladbarati/autonomous-researcher/actions/workflows/codeql.yml)
+
 An event-driven AI research agent that autonomously retrieves, summarizes, and synthesizes web content using LangGraph, LangChain, and Retrieval-Augmented Generation (RAG).
 
 ## Features
