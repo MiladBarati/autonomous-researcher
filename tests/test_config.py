@@ -28,36 +28,43 @@ def test_config_has_required_attributes() -> None:
 
 def test_config_validate_missing_keys() -> None:
     """Test that Config.validate raises error for missing keys"""
-    with patch.dict(os.environ, {}, clear=True):
-        # Mock the class attributes
-        with patch.object(Config, "GROQ_API_KEY", ""):
-            with patch.object(Config, "TAVILY_API_KEY", ""):
-                with pytest.raises(ValueError, match="Missing required API keys"):
-                    Config.validate()
+    with (
+        patch.dict(os.environ, {}, clear=True),
+        patch.object(Config, "GROQ_API_KEY", ""),
+        patch.object(Config, "TAVILY_API_KEY", ""),
+        pytest.raises(ValueError, match="Missing required API keys"),
+    ):
+        Config.validate()
 
 
 def test_config_validate_missing_groq_key() -> None:
     """Test that Config.validate raises error for missing GROQ key"""
-    with patch.object(Config, "GROQ_API_KEY", ""):
-        with patch.object(Config, "TAVILY_API_KEY", "test-tavily-key"):
-            with pytest.raises(ValueError, match="Missing required API keys"):
-                Config.validate()
+    with (
+        patch.object(Config, "GROQ_API_KEY", ""),
+        patch.object(Config, "TAVILY_API_KEY", "test-tavily-key"),
+        pytest.raises(ValueError, match="Missing required API keys"),
+    ):
+        Config.validate()
 
 
 def test_config_validate_missing_tavily_key() -> None:
     """Test that Config.validate raises error for missing Tavily key"""
-    with patch.object(Config, "GROQ_API_KEY", "test-groq-key"):
-        with patch.object(Config, "TAVILY_API_KEY", ""):
-            with pytest.raises(ValueError, match="Missing required API keys"):
-                Config.validate()
+    with (
+        patch.object(Config, "GROQ_API_KEY", "test-groq-key"),
+        patch.object(Config, "TAVILY_API_KEY", ""),
+        pytest.raises(ValueError, match="Missing required API keys"),
+    ):
+        Config.validate()
 
 
 def test_config_validate_success() -> None:
     """Test that Config.validate returns True when keys are present"""
-    with patch.object(Config, "GROQ_API_KEY", "test-groq-key"):
-        with patch.object(Config, "TAVILY_API_KEY", "test-tavily-key"):
-            result = Config.validate()
-            assert result is True
+    with (
+        patch.object(Config, "GROQ_API_KEY", "test-groq-key"),
+        patch.object(Config, "TAVILY_API_KEY", "test-tavily-key"),
+    ):
+        result = Config.validate()
+        assert result is True
 
 
 def test_get_llm_returns_chatgroq() -> None:
@@ -91,7 +98,7 @@ def test_get_llm_with_custom_temperature() -> None:
         mock_llm = MagicMock()
         MockChatGroq.return_value = mock_llm
 
-        llm = get_llm(temperature=0.5)
+        get_llm(temperature=0.5)
         # Verify temperature was passed
         call_kwargs = MockChatGroq.call_args[1]
         assert call_kwargs["temperature"] == 0.5
@@ -110,7 +117,7 @@ def test_get_llm_with_custom_max_tokens() -> None:
         mock_llm = MagicMock()
         MockChatGroq.return_value = mock_llm
 
-        llm = get_llm(max_tokens=2000)
+        get_llm(max_tokens=2000)
         # Verify max_tokens was passed
         call_kwargs = MockChatGroq.call_args[1]
         assert call_kwargs["max_tokens"] == 2000
@@ -129,9 +136,8 @@ def test_get_llm_uses_defaults() -> None:
         mock_llm = MagicMock()
         MockChatGroq.return_value = mock_llm
 
-        llm = get_llm()
+        get_llm()
         # Verify defaults were used
         call_kwargs = MockChatGroq.call_args[1]
         assert call_kwargs["temperature"] == 0.7
         assert call_kwargs["max_tokens"] == 1000
-

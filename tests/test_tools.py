@@ -43,7 +43,7 @@ def test_web_scraper_scrape_parses_content() -> None:
         status_code = 200
         content = html
 
-        def raise_for_status(self):
+        def raise_for_status(self) -> None:
             return None
 
     with patch("agent.tools.requests.get", return_value=Resp()):
@@ -62,7 +62,7 @@ def test_web_scraper_scrape_parses_content() -> None:
 def test_web_scraper_scrape_multiple_respects_limit() -> None:
     scraper = WebScraperTool()
     mock_scrape = MagicMock(side_effect=lambda _: {"success": True, "content": "x"})
-    scraper.scrape = mock_scrape
+    scraper.scrape = mock_scrape  # type: ignore[method-assign]
 
     urls: list[str] = [f"http://u{i}" for i in range(10)]
     out: list[dict[str, Any]] = scraper.scrape_multiple(urls, max_urls=3)
@@ -75,7 +75,7 @@ def test_arxiv_search_tool_maps_results() -> None:
     arxiv_tool = ArxivSearchTool()
 
     class FakePaper:
-        def __init__(self, i):
+        def __init__(self, i: int) -> None:
             self.title = f"T{i}"
             self.authors = [
                 types.SimpleNamespace(name="Author1"),
@@ -105,15 +105,15 @@ def test_pdf_processor_extract_from_url() -> None:
         status_code = 200
         content = pdf_bytes
 
-        def raise_for_status(self):
+        def raise_for_status(self) -> None:
             return None
 
     class FakePage:
-        def extract_text(self):
+        def extract_text(self) -> str:
             return "Hello PDF"
 
     class FakeReader:
-        def __init__(self, _):
+        def __init__(self, _: Any) -> None:
             self.pages = [FakePage(), FakePage()]
 
     with (
@@ -208,7 +208,7 @@ def test_web_scraper_handles_missing_title() -> None:
         status_code = 200
         content = html
 
-        def raise_for_status(self):
+        def raise_for_status(self) -> None:
             return None
 
     with patch("agent.tools.requests.get", return_value=Resp()):
@@ -229,7 +229,7 @@ def test_web_scraper_scrape_multiple_handles_failures() -> None:
             {"success": True, "content": "y"},
         ]
     )
-    scraper.scrape = mock_scrape
+    scraper.scrape = mock_scrape  # type: ignore[method-assign]
 
     urls: list[str] = ["http://u1", "http://u2", "http://u3"]
     out: list[dict[str, Any]] = scraper.scrape_multiple(urls)
@@ -245,7 +245,7 @@ def test_web_scraper_scrape_multiple_uses_default_max_urls() -> None:
 
     scraper = WebScraperTool()
     mock_scrape = MagicMock(return_value={"success": True, "content": "x"})
-    scraper.scrape = mock_scrape
+    scraper.scrape = mock_scrape  # type: ignore[method-assign]
 
     urls: list[str] = [f"http://u{i}" for i in range(20)]
     scraper.scrape_multiple(urls)
@@ -259,7 +259,10 @@ def test_web_scraper_as_tool() -> None:
     langchain_tool = scraper.as_tool()
 
     assert langchain_tool.name == "web_scraper"
-    assert "webpage" in langchain_tool.description.lower() or "url" in langchain_tool.description.lower()
+    assert (
+        "webpage" in langchain_tool.description.lower()
+        or "url" in langchain_tool.description.lower()
+    )
 
 
 def test_arxiv_search_tool_handles_error() -> None:
@@ -274,7 +277,6 @@ def test_arxiv_search_tool_handles_error() -> None:
 
 def test_arxiv_search_tool_uses_default_max_results() -> None:
     """Test that ArxivSearchTool uses default max_results"""
-    from config import Config
 
     arxiv_tool = ArxivSearchTool()
     fake_search = MagicMock()
@@ -283,7 +285,6 @@ def test_arxiv_search_tool_uses_default_max_results() -> None:
     with patch("agent.tools.arxiv.Search", return_value=fake_search):
         arxiv_tool.search("query")
 
-    call_kwargs = fake_search.__init__.call_args[1] if hasattr(fake_search.__init__, "call_args") else {}
     # Verify max_results was used in Search constructor
     assert fake_search.results.called
 
@@ -294,7 +295,10 @@ def test_arxiv_search_tool_as_tool() -> None:
     langchain_tool = arxiv_tool.as_tool()
 
     assert langchain_tool.name == "arxiv_search"
-    assert "arxiv" in langchain_tool.description.lower() or "academic" in langchain_tool.description.lower()
+    assert (
+        "arxiv" in langchain_tool.description.lower()
+        or "academic" in langchain_tool.description.lower()
+    )
 
 
 def test_pdf_processor_handles_network_error() -> None:
@@ -336,18 +340,18 @@ def test_pdf_processor_extract_from_arxiv_papers() -> None:
     pdf_tool = PDFProcessorTool()
 
     class FakePage:
-        def extract_text(self):
+        def extract_text(self) -> str:
             return "PDF Content"
 
     class FakeReader:
-        def __init__(self, _):
+        def __init__(self, _: Any) -> None:
             self.pages = [FakePage()]
 
     class Resp:
         status_code = 200
         content = b"%PDF-1.4"
 
-        def raise_for_status(self):
+        def raise_for_status(self) -> None:
             return None
 
     papers: list[dict[str, Any]] = [
@@ -377,9 +381,7 @@ def test_pdf_processor_extract_from_arxiv_papers_filters_failures() -> None:
     ]
 
     # Mock extract_from_url to fail for first paper (only one call since Paper 2 has no pdf_url)
-    pdf_tool.extract_from_url = MagicMock(
-        return_value={"success": False, "content": ""}
-    )
+    pdf_tool.extract_from_url = MagicMock(return_value={"success": False, "content": ""})  # type: ignore[method-assign]
 
     results: list[dict[str, Any]] = pdf_tool.extract_from_arxiv_papers(papers)
     # Should only include successful extractions (none in this case)
@@ -408,8 +410,9 @@ def test_tool_manager_initializes_all_tools() -> None:
 
 def test_tool_manager_get_all_tools() -> None:
     """Test that ToolManager.get_all_tools returns all tools"""
-    from agent.tools import ToolManager
     from langchain_core.tools import Tool
+
+    from agent.tools import ToolManager
 
     manager = ToolManager()
     tools: list[Tool] = manager.get_all_tools()

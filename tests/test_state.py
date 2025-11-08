@@ -2,9 +2,7 @@
 
 import uuid
 
-import pytest
-
-from agent.state import ResearchState, create_initial_state
+from agent.state import create_initial_state
 
 
 def test_create_initial_state() -> None:
@@ -81,4 +79,3 @@ def test_create_initial_state_long_topic() -> None:
     long_topic = "A" * 1000
     state = create_initial_state(long_topic)
     assert state["topic"] == long_topic
-

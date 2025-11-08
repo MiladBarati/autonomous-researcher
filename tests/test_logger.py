@@ -2,17 +2,14 @@
 
 import json
 import logging
-from contextvars import ContextVar
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from agent.logger import (
+    StructuredLogger,
     clear_logging_context,
     get_logger,
     get_logging_context,
     set_logging_context,
-    StructuredLogger,
 )
 
 
@@ -98,7 +95,7 @@ def test_logger_logs_with_context() -> None:
 
         logger.info("Test message")
         # Verify handler was called
-        assert mock_handler.handle.called or True  # Handler may be called
+        assert True  # Handler may be called
 
 
 def test_logger_formatter_includes_context() -> None:
@@ -151,4 +148,3 @@ def test_console_formatter_includes_context() -> None:
     assert "console-123" in formatted
     assert "console topic" in formatted
     assert "Test message" in formatted
-

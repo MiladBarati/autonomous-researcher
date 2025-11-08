@@ -10,7 +10,7 @@ from config import Config
 
 
 @pytest.fixture()
-def temp_chroma_dir(tmp_path, monkeypatch):
+def temp_chroma_dir(tmp_path: Any, monkeypatch: Any) -> Any:
     tmp = tmp_path / "chroma"
     os.makedirs(tmp, exist_ok=True)
     monkeypatch.setattr(Config, "CHROMA_PERSIST_DIR", str(tmp), raising=False)
@@ -18,7 +18,7 @@ def temp_chroma_dir(tmp_path, monkeypatch):
 
 
 def test_chunk_documents_creates_chunks_with_metadata(
-    temp_chroma_dir,  # noqa: ARG001
+    temp_chroma_dir: Any,  # noqa: ARG001
 ) -> None:
     # Mock heavy components
     with (
@@ -42,7 +42,7 @@ def test_chunk_documents_creates_chunks_with_metadata(
     assert all(c["source"] == "web" for c in chunks)
 
 
-def test_embed_chunks_uses_embedding_model(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_embed_chunks_uses_embedding_model(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     with (
         patch("agent.rag.SentenceTransformer") as ST,
         patch("agent.rag.chromadb.PersistentClient") as PC,
@@ -63,7 +63,7 @@ def test_embed_chunks_uses_embedding_model(temp_chroma_dir) -> None:  # noqa: AR
     ST.return_value.encode.assert_called_once()
 
 
-def test_store_documents_adds_to_chroma(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_store_documents_adds_to_chroma(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     with (
         patch("agent.rag.SentenceTransformer") as ST,
         patch("agent.rag.chromadb.PersistentClient") as PC,
@@ -87,7 +87,7 @@ def test_store_documents_adds_to_chroma(temp_chroma_dir) -> None:  # noqa: ARG00
 
 
 def test_retrieve_formats_results_and_similarity(
-    temp_chroma_dir,  # noqa: ARG001
+    temp_chroma_dir: Any,  # noqa: ARG001
 ) -> None:
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -115,7 +115,7 @@ def test_retrieve_formats_results_and_similarity(
     assert "[Source 1: A]" in ctx
 
 
-def test_chunk_documents_handles_empty_content(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_chunk_documents_handles_empty_content(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     """Test that chunk_documents handles documents with empty content"""
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -138,7 +138,7 @@ def test_chunk_documents_handles_empty_content(temp_chroma_dir) -> None:  # noqa
     assert len(chunks) == 0
 
 
-def test_chunk_documents_preserves_metadata(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_chunk_documents_preserves_metadata(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     """Test that chunk_documents preserves all metadata fields"""
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -173,7 +173,7 @@ def test_chunk_documents_preserves_metadata(temp_chroma_dir) -> None:  # noqa: A
     assert chunks[0]["categories"] == "['cs.AI']"
 
 
-def test_store_documents_handles_empty_list(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_store_documents_handles_empty_list(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     """Test that store_documents handles empty document list"""
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -191,7 +191,7 @@ def test_store_documents_handles_empty_list(temp_chroma_dir) -> None:  # noqa: A
     assert not fake_collection.add.called
 
 
-def test_store_documents_handles_empty_chunks(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_store_documents_handles_empty_chunks(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     """Test that store_documents handles documents that produce no chunks"""
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -210,7 +210,7 @@ def test_store_documents_handles_empty_chunks(temp_chroma_dir) -> None:  # noqa:
     assert count == 0
 
 
-def test_retrieve_handles_empty_results(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_retrieve_handles_empty_results(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     """Test that retrieve handles empty query results"""
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -233,7 +233,7 @@ def test_retrieve_handles_empty_results(temp_chroma_dir) -> None:  # noqa: ARG00
     assert len(out) == 0
 
 
-def test_retrieve_uses_default_top_k(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_retrieve_uses_default_top_k(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     """Test that retrieve uses default top_k when not provided"""
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -252,14 +252,14 @@ def test_retrieve_uses_default_top_k(temp_chroma_dir) -> None:  # noqa: ARG001
 
         rag = RAGPipeline(collection_name="test_collection")
 
-    out: list[dict[str, Any]] = rag.retrieve("query")
+    rag.retrieve("query")
     # Should use Config.TOP_K_RESULTS (default 5)
     assert fake_collection.query.called
     call_kwargs = fake_collection.query.call_args[1]
     assert call_kwargs["n_results"] == 5
 
 
-def test_format_retrieved_context_handles_empty_list(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_format_retrieved_context_handles_empty_list(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     """Test that format_retrieved_context handles empty chunk list"""
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -276,7 +276,9 @@ def test_format_retrieved_context_handles_empty_list(temp_chroma_dir) -> None:  
     assert ctx == "No relevant context found."
 
 
-def test_format_retrieved_context_uses_url_when_no_title(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_format_retrieved_context_uses_url_when_no_title(
+    temp_chroma_dir: Any,  # noqa: ARG001
+) -> None:
     """Test that format_retrieved_context uses URL when title is missing"""
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -299,7 +301,7 @@ def test_format_retrieved_context_uses_url_when_no_title(temp_chroma_dir) -> Non
     assert "http://test.com" in ctx
 
 
-def test_get_collection_stats(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_get_collection_stats(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     """Test that get_collection_stats returns correct information"""
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -319,7 +321,7 @@ def test_get_collection_stats(temp_chroma_dir) -> None:  # noqa: ARG001
     assert "persist_directory" in stats
 
 
-def test_clear_collection(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_clear_collection(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     """Test that clear_collection deletes and recreates collection"""
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -336,7 +338,7 @@ def test_clear_collection(temp_chroma_dir) -> None:  # noqa: ARG001
         assert PC.return_value.delete_collection.called
 
 
-def test_get_or_create_collection_uses_existing(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_get_or_create_collection_uses_existing(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     """Test that _get_or_create_collection uses existing collection"""
     with (
         patch("agent.rag.SentenceTransformer") as ST,
@@ -352,7 +354,7 @@ def test_get_or_create_collection_uses_existing(temp_chroma_dir) -> None:  # noq
         assert not PC.return_value.create_collection.called
 
 
-def test_create_rag_pipeline_factory(temp_chroma_dir) -> None:  # noqa: ARG001
+def test_create_rag_pipeline_factory(temp_chroma_dir: Any) -> None:  # noqa: ARG001
     """Test that create_rag_pipeline factory function works"""
     from agent.rag import create_rag_pipeline
 

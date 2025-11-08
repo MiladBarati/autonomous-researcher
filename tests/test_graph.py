@@ -15,7 +15,7 @@ class DummyLLM:
 
 
 @pytest.fixture()
-def agent_with_stubs(monkeypatch):
+def agent_with_stubs(monkeypatch: Any) -> Any:
     # Stub get_llm to avoid API validation
     monkeypatch.setattr(
         "agent.graph.get_llm",
@@ -41,10 +41,10 @@ def agent_with_stubs(monkeypatch):
         agent.llm = DummyLLM("SYNTHESIS TEXT")  # type: ignore[assignment]
 
         # Stub tools to deterministic outputs
-        agent.tools.tavily.search = MagicMock(
+        agent.tools.tavily.search = MagicMock(  # type: ignore[method-assign]
             return_value=[{"title": "A", "url": "http://a", "content": "c", "score": 1.0}]
         )
-        agent.tools.scraper.scrape_multiple = MagicMock(
+        agent.tools.scraper.scrape_multiple = MagicMock(  # type: ignore[method-assign]
             return_value=[
                 {
                     "title": "A",
@@ -55,7 +55,7 @@ def agent_with_stubs(monkeypatch):
                 }
             ]
         )
-        agent.tools.arxiv.search = MagicMock(
+        agent.tools.arxiv.search = MagicMock(  # type: ignore[method-assign]
             return_value=[
                 {"title": "Paper", "authors": ["X"], "summary": "sum", "url": "u", "pdf_url": "pu"}
             ]
@@ -64,7 +64,7 @@ def agent_with_stubs(monkeypatch):
     return agent
 
 
-def test_plan_research_generates_queries(agent_with_stubs):
+def test_plan_research_generates_queries(agent_with_stubs: Any) -> None:
     from agent.state import create_initial_state
 
     state = create_initial_state("Test Topic")
@@ -73,7 +73,7 @@ def test_plan_research_generates_queries(agent_with_stubs):
     assert out["status"] == "planned"
 
 
-def test_full_graph_flow_completes(agent_with_stubs):
+def test_full_graph_flow_completes(agent_with_stubs: Any) -> None:
     from agent.state import create_initial_state
 
     initial_state = create_initial_state("AI safety")
@@ -85,7 +85,7 @@ def test_full_graph_flow_completes(agent_with_stubs):
     assert final_state["step_count"] >= 7
 
 
-def test_plan_research_fallback_queries(agent_with_stubs):
+def test_plan_research_fallback_queries(agent_with_stubs: Any) -> None:
     """Test that plan_research falls back to default queries if extraction fails"""
     from agent.state import create_initial_state
 
@@ -101,7 +101,7 @@ def test_plan_research_fallback_queries(agent_with_stubs):
     assert out["status"] == "planned"
 
 
-def test_plan_research_extracts_queries_with_dashes(agent_with_stubs):
+def test_plan_research_extracts_queries_with_dashes(agent_with_stubs: Any) -> None:
     """Test that plan_research extracts queries with dash formatting"""
     from agent.state import create_initial_state
 
@@ -116,7 +116,7 @@ def test_plan_research_extracts_queries_with_dashes(agent_with_stubs):
     assert out["status"] == "planned"
 
 
-def test_search_web_limits_queries(agent_with_stubs):
+def test_search_web_limits_queries(agent_with_stubs: Any) -> None:
     """Test that search_web limits to 5 queries"""
     from agent.state import create_initial_state
 
@@ -130,7 +130,7 @@ def test_search_web_limits_queries(agent_with_stubs):
     assert out["status"] == "searched"
 
 
-def test_search_web_handles_empty_queries(agent_with_stubs):
+def test_search_web_handles_empty_queries(agent_with_stubs: Any) -> None:
     """Test that search_web handles empty query list"""
     from agent.state import create_initial_state
 
@@ -143,7 +143,7 @@ def test_search_web_handles_empty_queries(agent_with_stubs):
     assert out["status"] == "searched"
 
 
-def test_scrape_content_handles_empty_results(agent_with_stubs):
+def test_scrape_content_handles_empty_results(agent_with_stubs: Any) -> None:
     """Test that scrape_content handles empty search results"""
     from agent.state import create_initial_state
 
@@ -159,7 +159,7 @@ def test_scrape_content_handles_empty_results(agent_with_stubs):
     assert out["status"] == "scraped"
 
 
-def test_scrape_content_filters_urls(agent_with_stubs):
+def test_scrape_content_filters_urls(agent_with_stubs: Any) -> None:
     """Test that scrape_content filters out results without URLs"""
     from agent.state import create_initial_state
 
@@ -177,7 +177,7 @@ def test_scrape_content_filters_urls(agent_with_stubs):
     assert out["status"] == "scraped"
 
 
-def test_search_arxiv_handles_empty_topic(agent_with_stubs):
+def test_search_arxiv_handles_empty_topic(agent_with_stubs: Any) -> None:
     """Test that search_arxiv handles empty topic"""
     from agent.state import create_initial_state
 
@@ -188,7 +188,7 @@ def test_search_arxiv_handles_empty_topic(agent_with_stubs):
     assert agent_with_stubs.tools.arxiv.search.called
 
 
-def test_process_documents_combines_sources(agent_with_stubs):
+def test_process_documents_combines_sources(agent_with_stubs: Any) -> None:
     """Test that process_documents combines scraped content and arxiv papers"""
     from agent.state import create_initial_state
 
@@ -213,7 +213,7 @@ def test_process_documents_combines_sources(agent_with_stubs):
     assert out["status"] == "documents_processed"
 
 
-def test_embed_and_store_handles_empty_documents(agent_with_stubs):
+def test_embed_and_store_handles_empty_documents(agent_with_stubs: Any) -> None:
     """Test that embed_and_store handles empty document list"""
     from agent.state import create_initial_state
 
@@ -226,7 +226,7 @@ def test_embed_and_store_handles_empty_documents(agent_with_stubs):
     assert out["step_count"] == state["step_count"] + 1
 
 
-def test_retrieve_and_synthesize_handles_empty_retrieval(agent_with_stubs):
+def test_retrieve_and_synthesize_handles_empty_retrieval(agent_with_stubs: Any) -> None:
     """Test that retrieve_and_synthesize handles empty retrieval results"""
     from agent.state import create_initial_state
 
@@ -240,7 +240,7 @@ def test_retrieve_and_synthesize_handles_empty_retrieval(agent_with_stubs):
     assert "synthesis" in out
 
 
-def test_research_method_executes_full_workflow(agent_with_stubs):
+def test_research_method_executes_full_workflow(agent_with_stubs: Any) -> None:
     """Test that research() method executes full workflow"""
     final_state = agent_with_stubs.research("Test Topic")
 
@@ -249,11 +249,13 @@ def test_research_method_executes_full_workflow(agent_with_stubs):
     assert final_state["step_count"] >= 7
 
 
-def test_create_research_graph_factory(agent_with_stubs):
+def test_create_research_graph_factory(agent_with_stubs: Any) -> None:  # noqa: ARG001
     """Test that create_research_graph factory function works"""
     from agent.graph import create_research_graph
 
-    with patch("agent.graph.get_llm", return_value=DummyLLM("test")):
-        with patch("agent.graph.RAGPipeline"):
-            agent = create_research_graph()
-            assert isinstance(agent, ResearchAgent)
+    with (
+        patch("agent.graph.get_llm", return_value=DummyLLM("test")),
+        patch("agent.graph.RAGPipeline"),
+    ):
+        agent = create_research_graph()
+        assert isinstance(agent, ResearchAgent)
