@@ -274,7 +274,7 @@ mypy .
 
 **Run all checks:**
 ```bash
-black . && isort . && ruff check . && ruff format . && mypy .
+black . ; isort . ; ruff check . ; ruff format . ; mypy .
 ```
 
 All tools are configured in `pyproject.toml` with sensible defaults for Python 3.11+.
