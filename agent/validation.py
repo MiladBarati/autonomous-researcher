@@ -9,7 +9,7 @@ Provides functions for validating and sanitizing user inputs to prevent:
 """
 
 import re
-from typing import Any, cast
+from typing import Any
 from urllib.parse import urlparse, urlunparse
 
 from agent.logger import get_logger
@@ -66,9 +66,6 @@ def sanitize_text(
     if not isinstance(text, str):
         text = str(text)
 
-    # Type narrowing: text is now definitely a str
-    text = cast(str, text)
-
     # Remove null bytes
     text = text.replace("\x00", "")
 
@@ -94,7 +91,7 @@ def sanitize_text(
         text = text[:max_length]
         logger.warning(f"Text truncated to {max_length} characters")
 
-    return cast(str, text)
+    return text
 
 
 def validate_topic(topic: str | object) -> str:
@@ -381,9 +378,6 @@ def sanitize_for_display(text: str | object, max_length: int = 1000) -> str:
     if not isinstance(text, str):
         text = str(text)
 
-    # Type narrowing: text is now definitely a str
-    text = cast(str, text)
-
     # Remove null bytes
     text = text.replace("\x00", "")
 
@@ -395,4 +389,4 @@ def sanitize_for_display(text: str | object, max_length: int = 1000) -> str:
     if len(text) > max_length:
         text = text[:max_length] + "..."
 
-    return cast(str, text)
+    return text

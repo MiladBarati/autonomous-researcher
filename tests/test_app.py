@@ -117,8 +117,11 @@ def test_display_progress_tracking() -> None:
         patch("app.st.metric"),
         patch("app.st.markdown"),
     ):
-        # Code needs 7 columns (3 for metrics + 7 for stages)
-        mock_columns.return_value = [MagicMock() for _ in range(10)]
+        # Code calls st.columns twice: once with 3, once with 7
+        def columns_side_effect(n: int) -> tuple:
+            return tuple(MagicMock() for _ in range(n))
+
+        mock_columns.side_effect = columns_side_effect
 
         from app import display_progress_tracking
 

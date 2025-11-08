@@ -7,7 +7,7 @@ using ChromaDB and sentence-transformers.
 
 import hashlib
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import Any, TypedDict, cast
 
 import chromadb
 from chromadb import Collection
@@ -17,12 +17,6 @@ from sentence_transformers import SentenceTransformer
 from agent.logger import get_logger
 from agent.validation import ValidationError, validate_query
 from config import Config
-
-if TYPE_CHECKING:
-    from chromadb import PersistentClient
-else:
-    # Runtime type stub for ChromaDB client
-    PersistentClient = Any
 
 
 # TypedDict for ChromaDB query results
@@ -79,7 +73,7 @@ class RAGPipeline:
 
         # Initialize ChromaDB client
         # Note: Using type: ignore because chromadb doesn't have complete type stubs
-        self.client: PersistentClient = chromadb.PersistentClient(  # type: ignore[assignment]
+        self.client: Any = chromadb.PersistentClient(
             path=Config.CHROMA_PERSIST_DIR,
             settings=Settings(anonymized_telemetry=False, allow_reset=True),
         )
@@ -90,12 +84,12 @@ class RAGPipeline:
     def _get_or_create_collection(self) -> Collection:
         """Get existing collection or create new one"""
         try:
-            collection = self.client.get_collection(name=self.collection_name)
+            collection = self.client.get_collection(name=self.collection_name)  # type: ignore[attr-defined]
             logger.debug(f"Using existing collection: {self.collection_name}")
             # ChromaDB doesn't have complete type stubs, so we use cast
             return cast(Collection, collection)
         except Exception:
-            collection = self.client.create_collection(
+            collection = self.client.create_collection(  # type: ignore[attr-defined]
                 name=self.collection_name, metadata={"hnsw:space": "cosine"}
             )
             logger.info(f"Created new collection: {self.collection_name}")
@@ -283,7 +277,7 @@ class RAGPipeline:
     def clear_collection(self) -> None:
         """Clear all documents from the collection"""
         try:
-            self.client.delete_collection(name=self.collection_name)
+            self.client.delete_collection(name=self.collection_name)  # type: ignore[attr-defined]
             self.collection = self._get_or_create_collection()
             logger.info(f"Cleared collection: {self.collection_name}")
         except Exception as e:

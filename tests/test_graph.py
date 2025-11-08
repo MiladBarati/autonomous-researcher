@@ -272,9 +272,13 @@ def test_research_method_executes_full_workflow(agent_with_stubs: Any) -> None:
 
 def test_create_research_graph_factory(agent_with_stubs: Any) -> None:  # noqa: ARG001
     """Test that create_research_graph factory function works"""
+    from pydantic import SecretStr
+
     from agent.graph import create_research_graph
+    from config import Config
 
     with (
+        patch.object(Config, "TAVILY_API_KEY", SecretStr("test-key")),
         patch("agent.graph.get_llm", return_value=DummyLLM("test")),
         patch("agent.graph.RAGPipeline"),
     ):
