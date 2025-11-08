@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools~=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -15,40 +15,40 @@ description = "Event-driven AI research agent with LangGraph, LangChain, and RAG
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "langgraph>=0.2.0",
-    "langchain>=0.3.0",
-    "langchain-groq>=0.2.0",
-    "langchain-community>=0.3.0",
-    "langchain-text-splitters>=0.3.0",
-    "chromadb>=0.5.0",
-    "sentence-transformers>=2.2.0",
-    "tavily-python>=0.5.0",
-    "arxiv>=2.1.0",
-    "beautifulsoup4>=4.12.0",
-    "playwright>=1.40.0",
-    "pypdf2>=3.0.0",
-    "pdfplumber>=0.11.0",
-    "streamlit>=1.28.0",
-    "python-dotenv>=1.0.0",
-    "requests>=2.31.0",
-    "tiktoken>=0.5.0",
+    "langgraph~=0.2.0",
+    "langchain~=0.3.0",
+    "langchain-groq~=0.2.0",
+    "langchain-community~=0.3.0",
+    "langchain-text-splitters~=0.3.0",
+    "chromadb~=0.5.0",
+    "sentence-transformers~=2.2.0",
+    "tavily-python~=0.5.0",
+    "arxiv~=2.1.0",
+    "beautifulsoup4~=4.12.0",
+    "playwright~=1.40.0",
+    "pypdf2~=3.0.0",
+    "pdfplumber~=0.11.0",
+    "streamlit~=1.28.0",
+    "python-dotenv~=1.0.0",
+    "requests~=2.31.0",
+    "tiktoken~=0.5.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
-    "pytest-cov>=4.1.0",
-    "black>=24.0.0",
-    "isort>=5.13.0",
-    "ruff>=0.5.0",
-    "mypy>=1.8.0",
-    "types-requests>=2.31.0",
-    "types-beautifulsoup4>=4.12.0",
-    "pre-commit>=3.5.0",
-    "sphinx>=7.0.0",
-    "sphinx-rtd-theme>=2.0.0",
-    "bandit>=1.7.0",
-    "safety>=3.0.0",
+    "pytest~=8.0.0",
+    "pytest-cov~=4.1.0",
+    "black~=24.0.0",
+    "isort~=5.13.0",
+    "ruff~=0.5.0",
+    "mypy~=1.8.0",
+    "types-requests~=2.31.0",
+    "types-beautifulsoup4~=4.12.0",
+    "pre-commit~=3.5.0",
+    "sphinx~=7.0.0",
+    "sphinx-rtd-theme~=2.0.0",
+    "bandit~=1.7.0",
+    "safety~=3.0.0",
 ]
 
 [tool.black]
