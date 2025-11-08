@@ -190,3 +190,10 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "@abstractmethod",
 ]
+precision = 2
+show_missing = true
+skip_covered = false
+# Enforce minimum coverage threshold
+# Set to 80% as a reasonable starting point
+# Adjust based on project needs
+fail_under = 80.0
