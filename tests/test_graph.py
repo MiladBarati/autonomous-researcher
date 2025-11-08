@@ -41,9 +41,25 @@ def agent_with_stubs(monkeypatch):
         agent.llm = DummyLLM("SYNTHESIS TEXT")  # type: ignore[assignment]
 
         # Stub tools to deterministic outputs
-        agent.tools.tavily.search = MagicMock(return_value=[{"title": "A", "url": "http://a", "content": "c", "score": 1.0}])
-        agent.tools.scraper.scrape_multiple = MagicMock(return_value=[{"title": "A", "url": "http://a", "content": "content", "source": "web_scrape", "success": True}])
-        agent.tools.arxiv.search = MagicMock(return_value=[{"title": "Paper", "authors": ["X"], "summary": "sum", "url": "u", "pdf_url": "pu"}])
+        agent.tools.tavily.search = MagicMock(
+            return_value=[{"title": "A", "url": "http://a", "content": "c", "score": 1.0}]
+        )
+        agent.tools.scraper.scrape_multiple = MagicMock(
+            return_value=[
+                {
+                    "title": "A",
+                    "url": "http://a",
+                    "content": "content",
+                    "source": "web_scrape",
+                    "success": True,
+                }
+            ]
+        )
+        agent.tools.arxiv.search = MagicMock(
+            return_value=[
+                {"title": "Paper", "authors": ["X"], "summary": "sum", "url": "u", "pdf_url": "pu"}
+            ]
+        )
 
     return agent
 

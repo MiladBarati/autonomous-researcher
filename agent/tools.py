@@ -138,6 +138,28 @@ class WebScraperTool:
                 "success": True,
             }
 
+        except requests.RequestException as e:
+            logger.error(f"Network error: {e}")
+            return {
+                "url": url,
+                "title": "",
+                "content": "",
+                "word_count": 0,
+                "source": "web_scrape",
+                "success": False,
+                "error": str(e),
+            }
+        except ValueError as e:
+            logger.error(f"Invalid input: {e}")
+            return {
+                "url": url,
+                "title": "",
+                "content": "",
+                "word_count": 0,
+                "source": "web_scrape",
+                "success": False,
+                "error": str(e),
+            }
         except Exception as e:
             logger.warning(f"Scraping error for {url}: {e}")
             return {
@@ -266,6 +288,26 @@ class PDFProcessorTool:
                 "success": True,
             }
 
+        except requests.RequestException as e:
+            logger.error(f"Network error: {e}")
+            return {
+                "url": url,
+                "content": "",
+                "page_count": 0,
+                "source": "pdf",
+                "success": False,
+                "error": str(e),
+            }
+        except ValueError as e:
+            logger.error(f"Invalid input: {e}")
+            return {
+                "url": url,
+                "content": "",
+                "page_count": 0,
+                "source": "pdf",
+                "success": False,
+                "error": str(e),
+            }
         except Exception as e:
             logger.warning(f"PDF extraction error for {url}: {e}")
             return {
