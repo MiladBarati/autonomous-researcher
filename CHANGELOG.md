@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI/CD pipeline configuration
 
 ### Changed
-- N/A
+- **Refactored graph node methods**: Extracted cross-cutting concerns (logging, performance monitoring, validation) into a reusable `_node_decorator` function, significantly reducing code duplication and improving maintainability. All 7 node methods now use the decorator pattern for consistent behavior.
 
 ### Deprecated
 - N/A
