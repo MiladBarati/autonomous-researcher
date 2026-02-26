@@ -11,6 +11,7 @@ Implements LangChain-compatible tools for:
 
 import io
 import re
+from collections.abc import Callable
 from typing import Any
 
 import arxiv
@@ -25,6 +26,37 @@ from agent.validation import ValidationError, validate_query, validate_url, vali
 from config import Config
 
 logger = get_logger("tools")
+
+
+def create_error_response(
+    url: str | None = None,
+    source: str = "",
+    error: str = "",
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Create a standardized error response dictionary."""
+    base: dict[str, Any] = {
+        "url": url or "",
+        "title": "",
+        "content": "",
+        "word_count": 0,
+        "source": source,
+        "success": False,
+        "error": error,
+    }
+    base.update(kwargs)
+    return base
+
+
+def safe_validate(
+    validator: Callable[[str], str], value: str, error_context: str = ""
+) -> str | None:
+    """Safely validate a value, returning None on validation error."""
+    try:
+        return validator(value)
+    except ValidationError as e:
+        logger.error(f"{error_context}: {e}")
+        return None
 
 
 class TavilySearchTool:
@@ -45,17 +77,14 @@ class TavilySearchTool:
         Returns:
             List of search results with title, url, content, and score
         """
-        try:
-            # Validate and sanitize query
-            try:
-                query = validate_query(query)
-            except ValidationError as e:
-                logger.error(f"Invalid search query: {e}")
-                return []
+        validated_query = safe_validate(validate_query, query, "Invalid search query")
+        if not validated_query:
+            return []
 
+        try:
             max_results_value: int = max_results or Config.MAX_SEARCH_RESULTS
             response: dict[str, Any] = self.client.search(
-                query=query,
+                query=validated_query,
                 max_results=max_results_value,
                 search_depth="advanced",
                 include_answer=True,
@@ -75,14 +104,8 @@ class TavilySearchTool:
 
             return results
 
-        except requests.RequestException as e:
-            logger.error(f"Tavily API network error: {e}", exc_info=True)
-            return []
-        except KeyError as e:
-            logger.error(f"Tavily API response format error: {e}", exc_info=True)
-            return []
-        except ValueError as e:
-            logger.error(f"Tavily API validation error: {e}", exc_info=True)
+        except (requests.RequestException, KeyError, ValueError) as e:
+            logger.error(f"Tavily API error: {e}", exc_info=True)
             return []
         except Exception as e:
             logger.error(f"Tavily search unexpected error: {e}", exc_info=True)
@@ -115,23 +138,14 @@ class WebScraperTool:
         Returns:
             Dictionary with url, title, content, and metadata
         """
-        try:
-            # Validate and sanitize URL
-            try:
-                url = validate_url(url)
-            except ValidationError as e:
-                logger.error(f"Invalid URL: {e}")
-                return {
-                    "url": url,
-                    "title": "",
-                    "content": "",
-                    "word_count": 0,
-                    "source": "web_scrape",
-                    "success": False,
-                    "error": str(e),
-                }
+        validated_url = safe_validate(validate_url, url, "Invalid URL")
+        if not validated_url:
+            return create_error_response(url=url, source="web_scrape", error="Invalid URL")
 
-            response: requests.Response = requests.get(url, headers=self.headers, timeout=10)
+        try:
+            response: requests.Response = requests.get(
+                validated_url, headers=self.headers, timeout=10
+            )
             response.raise_for_status()
 
             soup: BeautifulSoup = BeautifulSoup(response.content, "html.parser")
@@ -145,12 +159,10 @@ class WebScraperTool:
             title_text: str = title.get_text().strip() if title else ""
 
             # Get main content
-            # Try to find main content area
             main_content = soup.find("main") or soup.find("article") or soup.find("body")
 
             content: str
             if main_content and hasattr(main_content, "find_all"):
-                # Extract text from paragraphs
                 paragraphs = main_content.find_all(["p", "h1", "h2", "h3", "h4", "h5", "h6"])
                 content = "\n\n".join(
                     [p.get_text().strip() for p in paragraphs if p.get_text().strip()]
@@ -163,7 +175,7 @@ class WebScraperTool:
             content = re.sub(r" +", " ", content)
 
             return {
-                "url": url,
+                "url": validated_url,
                 "title": title_text,
                 "content": content[:10000],  # Limit to 10k chars
                 "word_count": len(content.split()),
@@ -171,83 +183,28 @@ class WebScraperTool:
                 "success": True,
             }
 
-        except requests.Timeout as e:
-            logger.error(f"Request timeout for {url}: {e}")
-            return {
-                "url": url,
-                "title": "",
-                "content": "",
-                "word_count": 0,
-                "source": "web_scrape",
-                "success": False,
-                "error": f"Timeout: {str(e)}",
-            }
-        except requests.ConnectionError as e:
-            logger.error(f"Connection error for {url}: {e}")
-            return {
-                "url": url,
-                "title": "",
-                "content": "",
-                "word_count": 0,
-                "source": "web_scrape",
-                "success": False,
-                "error": f"Connection error: {str(e)}",
-            }
-        except requests.HTTPError as e:
-            logger.error(f"HTTP error for {url}: {e}")
-            return {
-                "url": url,
-                "title": "",
-                "content": "",
-                "word_count": 0,
-                "source": "web_scrape",
-                "success": False,
-                "error": f"HTTP {e.response.status_code if hasattr(e, 'response') else 'error'}: {str(e)}",
-            }
         except requests.RequestException as e:
-            logger.error(f"Network error for {url}: {e}")
-            return {
-                "url": url,
-                "title": "",
-                "content": "",
-                "word_count": 0,
-                "source": "web_scrape",
-                "success": False,
-                "error": str(e),
-            }
-        except (ValueError, TypeError) as e:
-            logger.error(f"Invalid input for {url}: {e}")
-            return {
-                "url": url,
-                "title": "",
-                "content": "",
-                "word_count": 0,
-                "source": "web_scrape",
-                "success": False,
-                "error": str(e),
-            }
-        except AttributeError as e:
-            logger.warning(f"HTML parsing error for {url}: {e}")
-            return {
-                "url": url,
-                "title": "",
-                "content": "",
-                "word_count": 0,
-                "source": "web_scrape",
-                "success": False,
-                "error": f"Parsing error: {str(e)}",
-            }
+            logger.error(f"Request error for {validated_url}: {e}")
+            return create_error_response(
+                url=validated_url,
+                source="web_scrape",
+                error=f"Request error: {str(e)}",
+            )
+        except (ValueError, TypeError, AttributeError) as e:
+            error_type = "parsing" if isinstance(e, AttributeError) else "input"
+            logger.warning(f"HTML {error_type} error for {validated_url}: {e}")
+            return create_error_response(
+                url=validated_url,
+                source="web_scrape",
+                error=f"{error_type.capitalize()} error: {str(e)}",
+            )
         except Exception as e:
-            logger.warning(f"Unexpected scraping error for {url}: {e}")
-            return {
-                "url": url,
-                "title": "",
-                "content": "",
-                "word_count": 0,
-                "source": "web_scrape",
-                "success": False,
-                "error": str(e),
-            }
+            logger.warning(f"Unexpected scraping error for {validated_url}: {e}")
+            return create_error_response(
+                url=validated_url,
+                source="web_scrape",
+                error=str(e),
+            )
 
     def scrape_multiple(self, urls: list[str], max_urls: int | None = None) -> list[dict[str, Any]]:
         """
@@ -300,18 +257,17 @@ class ArxivSearchTool:
         Returns:
             List of paper metadata
         """
-        try:
-            # Validate and sanitize query
-            try:
-                query = validate_query(query)
-            except ValidationError as e:
-                logger.error(f"Invalid ArXiv search query: {e}")
-                return []
+        validated_query = safe_validate(validate_query, query, "Invalid ArXiv search query")
+        if not validated_query:
+            return []
 
+        try:
             max_results_value: int = max_results or Config.MAX_ARXIV_RESULTS
 
             search: arxiv.Search = arxiv.Search(
-                query=query, max_results=max_results_value, sort_by=arxiv.SortCriterion.Relevance
+                query=validated_query,
+                max_results=max_results_value,
+                sort_by=arxiv.SortCriterion.Relevance,
             )
 
             results: list[dict[str, Any]] = []
@@ -331,17 +287,11 @@ class ArxivSearchTool:
 
             return results
 
-        except arxiv.UnexpectedEmptyPageError as e:
-            logger.error(f"ArXiv search returned empty page: {e}", exc_info=True)
+        except (arxiv.UnexpectedEmptyPageError, arxiv.HTTPError) as e:
+            logger.error(f"ArXiv API error: {e}", exc_info=True)
             return []
-        except arxiv.HTTPError as e:
-            logger.error(f"ArXiv API HTTP error: {e}", exc_info=True)
-            return []
-        except requests.RequestException as e:
-            logger.error(f"ArXiv API network error: {e}", exc_info=True)
-            return []
-        except ValueError as e:
-            logger.error(f"ArXiv search validation error: {e}", exc_info=True)
+        except (requests.RequestException, ValueError) as e:
+            logger.error(f"ArXiv search error: {e}", exc_info=True)
             return []
         except Exception as e:
             logger.error(f"ArXiv search unexpected error: {e}", exc_info=True)
@@ -369,25 +319,15 @@ class PDFProcessorTool:
         Returns:
             Dictionary with extracted content
         """
-        try:
-            # Validate and sanitize URL
-            try:
-                url = validate_url(url)
-            except ValidationError as e:
-                logger.error(f"Invalid PDF URL: {e}")
-                return {
-                    "url": url,
-                    "content": "",
-                    "page_count": 0,
-                    "source": "pdf",
-                    "success": False,
-                    "error": str(e),
-                }
+        validated_url = safe_validate(validate_url, url, "Invalid PDF URL")
+        if not validated_url:
+            return create_error_response(url=url, source="pdf", error="Invalid URL", page_count=0)
 
+        try:
             headers: dict[str, str] = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             }
-            response: requests.Response = requests.get(url, headers=headers, timeout=30)
+            response: requests.Response = requests.get(validated_url, headers=headers, timeout=30)
             response.raise_for_status()
 
             pdf_file: io.BytesIO = io.BytesIO(response.content)
@@ -398,86 +338,46 @@ class PDFProcessorTool:
                 text += page.extract_text() + "\n"
 
             return {
-                "url": url,
+                "url": validated_url,
                 "content": text[:20000],  # Limit to 20k chars
                 "page_count": len(pdf_reader.pages),
                 "source": "pdf",
                 "success": True,
             }
 
-        except requests.Timeout as e:
-            logger.error(f"PDF download timeout for {url}: {e}")
-            return {
-                "url": url,
-                "content": "",
-                "page_count": 0,
-                "source": "pdf",
-                "success": False,
-                "error": f"Timeout: {str(e)}",
-            }
-        except requests.ConnectionError as e:
-            logger.error(f"PDF download connection error for {url}: {e}")
-            return {
-                "url": url,
-                "content": "",
-                "page_count": 0,
-                "source": "pdf",
-                "success": False,
-                "error": f"Connection error: {str(e)}",
-            }
-        except requests.HTTPError as e:
-            logger.error(f"PDF download HTTP error for {url}: {e}")
-            return {
-                "url": url,
-                "content": "",
-                "page_count": 0,
-                "source": "pdf",
-                "success": False,
-                "error": f"HTTP {e.response.status_code if hasattr(e, 'response') else 'error'}: {str(e)}",
-            }
         except requests.RequestException as e:
-            logger.error(f"PDF download network error for {url}: {e}")
-            return {
-                "url": url,
-                "content": "",
-                "page_count": 0,
-                "source": "pdf",
-                "success": False,
-                "error": str(e),
-            }
+            logger.error(f"PDF download error for {validated_url}: {e}")
+            return create_error_response(
+                url=validated_url,
+                source="pdf",
+                error=f"Download error: {str(e)}",
+                page_count=0,
+            )
         except (ValueError, TypeError) as e:
-            logger.error(f"Invalid input for PDF {url}: {e}")
-            return {
-                "url": url,
-                "content": "",
-                "page_count": 0,
-                "source": "pdf",
-                "success": False,
-                "error": str(e),
-            }
+            logger.error(f"Invalid input for PDF {validated_url}: {e}")
+            return create_error_response(
+                url=validated_url,
+                source="pdf",
+                error=f"Input error: {str(e)}",
+                page_count=0,
+            )
         except Exception as pdf_error:
-            # Check if it's a PyPDF2-specific error (works with both old and new PyPDF2 versions)
             error_name = type(pdf_error).__name__
             if "PdfReadError" in error_name or "PdfStreamError" in error_name:
-                logger.error(f"PDF processing error for {url}: {pdf_error}")
-                return {
-                    "url": url,
-                    "content": "",
-                    "page_count": 0,
-                    "source": "pdf",
-                    "success": False,
-                    "error": f"PDF processing error: {str(pdf_error)}",
-                }
-            # For other unexpected errors
-            logger.warning(f"Unexpected PDF extraction error for {url}: {pdf_error}")
-            return {
-                "url": url,
-                "content": "",
-                "page_count": 0,
-                "source": "pdf",
-                "success": False,
-                "error": str(pdf_error),
-            }
+                logger.error(f"PDF processing error for {validated_url}: {pdf_error}")
+                return create_error_response(
+                    url=validated_url,
+                    source="pdf",
+                    error=f"PDF processing error: {str(pdf_error)}",
+                    page_count=0,
+                )
+            logger.warning(f"Unexpected PDF extraction error for {validated_url}: {pdf_error}")
+            return create_error_response(
+                url=validated_url,
+                source="pdf",
+                error=str(pdf_error),
+                page_count=0,
+            )
 
     def extract_from_arxiv_papers(self, papers: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """

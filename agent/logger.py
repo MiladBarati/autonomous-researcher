@@ -15,110 +15,104 @@ import sys
 from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 # Context variables for request tracking
 request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 topic_var: ContextVar[str | None] = ContextVar("topic", default=None)
 
 
-class ContextualFormatter(logging.Formatter):
-    """Custom formatter that includes request_id and topic in log records"""
+class BaseContextFormatter(logging.Formatter):
+    """Base formatter that injects context (request_id and topic) into log records"""
 
-    def format(self, record: logging.LogRecord) -> str:
-        # Add context to record (dynamically add attributes)
+    def _inject_context(self, record: logging.LogRecord) -> None:
+        """Inject context variables into the log record"""
         record.request_id = request_id_var.get() or "N/A"
         record.topic = topic_var.get() or "N/A"
 
-        # Format timestamp
-        timestamp: str = datetime.utcnow().isoformat()
-        record.timestamp = timestamp
 
-        # Use structured format
+class ContextualFormatter(BaseContextFormatter):
+    """JSON formatter that includes request_id and topic in log records"""
+
+    def format(self, record: logging.LogRecord) -> str:
+        self._inject_context(record)
+        record.timestamp = datetime.utcnow().isoformat()
+
         log_data: dict[str, Any] = {
-            "timestamp": getattr(record, "timestamp", ""),
+            "timestamp": record.timestamp,
             "level": record.levelname,
             "logger": record.name,
-            "request_id": getattr(record, "request_id", "N/A"),
-            "topic": getattr(record, "topic", "N/A"),
+            "request_id": record.request_id,
+            "topic": record.topic,
             "message": record.getMessage(),
             "module": record.module,
             "function": record.funcName,
             "line": record.lineno,
         }
 
-        # Add exception info if present
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
 
-        # Add extra fields if present
         if hasattr(record, "extra"):
             log_data.update(record.extra)
 
         return json.dumps(log_data, default=str)
 
 
-class ConsoleFormatter(logging.Formatter):
+class ConsoleFormatter(BaseContextFormatter):
     """Console formatter that includes request_id and topic"""
 
     def format(self, record: logging.LogRecord) -> str:
-        # Add context to record (dynamically add attributes)
-        record.request_id = request_id_var.get() or "N/A"
-        record.topic = topic_var.get() or "N/A"
-
-        # Call parent format
+        self._inject_context(record)
         return super().format(record)
 
 
 class StructuredLogger:
     """Structured logger with context support"""
 
-    _instance: Optional["StructuredLogger"] = None
-    _initialized: bool = False
+    _instance: "StructuredLogger | None" = None
 
     def __new__(cls) -> "StructuredLogger":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+            cls._instance._setup_logger()
         return cls._instance
 
-    def __init__(self) -> None:
-        if self._initialized:
-            return
-
+    def _setup_logger(self) -> None:
+        """Configure the logger with handlers"""
         self.logger: logging.Logger = logging.getLogger("autonomous_research_assistant")
         self.logger.setLevel(logging.DEBUG)
         self.logger.propagate = False
-
-        # Remove existing handlers
         self.logger.handlers.clear()
 
         # Console handler with INFO level
-        console_handler: logging.StreamHandler = logging.StreamHandler(sys.stdout)
+        console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.INFO)
-        console_formatter: ConsoleFormatter = ConsoleFormatter(
-            "%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] [%(topic)s] - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
+        console_handler.setFormatter(
+            ConsoleFormatter(
+                "%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] [%(topic)s] - %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
         )
-        console_handler.setFormatter(console_formatter)
         self.logger.addHandler(console_handler)
 
         # File handler with DEBUG level (structured JSON)
-        log_dir: Path = Path("logs")
+        log_dir = Path("logs")
         log_dir.mkdir(exist_ok=True)
 
-        file_handler: logging.handlers.RotatingFileHandler = logging.handlers.RotatingFileHandler(
+        file_formatter = ContextualFormatter()
+        file_handler = logging.handlers.RotatingFileHandler(
             log_dir / "research_assistant.log",
             maxBytes=10 * 1024 * 1024,  # 10MB
             backupCount=5,
             encoding="utf-8",
         )
         file_handler.setLevel(logging.DEBUG)
-        file_formatter: ContextualFormatter = ContextualFormatter()
         file_handler.setFormatter(file_formatter)
         self.logger.addHandler(file_handler)
 
         # Error file handler (only ERROR and above)
-        error_handler: logging.handlers.RotatingFileHandler = logging.handlers.RotatingFileHandler(
+        error_handler = logging.handlers.RotatingFileHandler(
             log_dir / "research_assistant_errors.log",
             maxBytes=10 * 1024 * 1024,  # 10MB
             backupCount=5,
@@ -127,8 +121,6 @@ class StructuredLogger:
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(file_formatter)
         self.logger.addHandler(error_handler)
-
-        self._initialized = True
 
     def get_logger(self) -> logging.Logger:
         """Get the configured logger instance"""
@@ -181,4 +173,4 @@ def get_logging_context() -> dict[str, str | None]:
 
 
 # Initialize logger on import
-_logger: StructuredLogger = StructuredLogger()
+_logger = StructuredLogger()

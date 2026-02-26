@@ -30,6 +30,118 @@ logger = get_logger("graph")
 metrics = get_metrics()
 
 
+def _extract_llm_content(response: Any) -> str:
+    """
+    Extract text content from LLM response, handling union types.
+
+    Args:
+        response: LLM response object
+
+    Returns:
+        String content from the response
+    """
+    content = response.content
+    return content if isinstance(content, str) else str(content)
+
+
+def _handle_llm_error(error: Exception, operation: str) -> None:
+    """
+    Handle LLM API errors with appropriate exception types.
+
+    Args:
+        error: The exception that occurred
+        operation: Description of the operation (e.g., "planning", "synthesis")
+
+    Raises:
+        RuntimeError: For rate limits, timeouts, or general API errors
+        ValueError: For authentication errors
+    """
+    error_type = type(error).__name__
+    error_str = str(error).lower()
+
+    if "RateLimit" in error_type or "rate_limit" in error_str:
+        logger.error(f"LLM rate limit error during {operation}: {error}")
+        raise RuntimeError(f"Rate limit exceeded. Please try again later: {error}") from error
+    elif "Authentication" in error_type or "auth" in error_str or "api_key" in error_str:
+        logger.error(f"LLM authentication error during {operation}: {error}")
+        raise ValueError(f"Authentication failed. Please check your API key: {error}") from error
+    elif "Timeout" in error_type or "timeout" in error_str:
+        logger.error(f"LLM timeout error during {operation}: {error}")
+        raise RuntimeError(f"Request timed out. Please try again: {error}") from error
+    else:
+        logger.error(f"LLM API error during {operation}: {error}", exc_info=True)
+        raise RuntimeError(f"LLM API error: {error}") from error
+
+
+def _extract_search_queries(plan_text: str, topic: str) -> list[str]:
+    """
+    Extract search queries from research plan text.
+
+    Args:
+        plan_text: The research plan text from LLM
+        topic: The research topic (used as fallback)
+
+    Returns:
+        List of validated search queries
+    """
+    queries: list[str] = []
+    lines = plan_text.split("\n")
+    in_queries_section = False
+
+    for line in lines:
+        line = line.strip()
+        if "SEARCH QUERIES:" in line:
+            in_queries_section = True
+            continue
+
+        if in_queries_section and line and (line[0].isdigit() or line.startswith("-")):
+            # Extract query text, removing numbering
+            query = line.split(".", 1)[-1].strip() if "." in line else line.lstrip("- ")
+            if query:
+                try:
+                    query = validate_query(query)
+                    queries.append(query)
+                except ValidationError as e:
+                    logger.warning(f"Skipping invalid query: {e}")
+                    continue
+
+    # Fallback: if no queries extracted, use the topic
+    if not queries:
+        try:
+            queries = [
+                validate_query(topic),
+                validate_query(f"{topic} overview"),
+                validate_query(f"{topic} recent developments"),
+            ]
+        except ValidationError:
+            # If topic itself is invalid, use a safe fallback
+            queries = [validate_query("research")] if topic else []
+
+    return queries
+
+
+def _validate_queries(queries: list[str], max_queries: int = 5) -> list[str]:
+    """
+    Validate and filter search queries.
+
+    Args:
+        queries: List of query strings to validate
+        max_queries: Maximum number of queries to return
+
+    Returns:
+        List of validated queries
+    """
+    valid_queries: list[str] = []
+    for query in queries[:max_queries]:
+        try:
+            validated_query = validate_query(query)
+            valid_queries.append(validated_query)
+        except ValidationError as e:
+            logger.warning(f"Skipping invalid query '{query}': {e}")
+            continue
+    return valid_queries
+
+
 class ResearchAgent:
     """Autonomous Research Agent using LangGraph"""
 
@@ -126,65 +238,10 @@ SEARCH QUERIES:
             try:
                 response = self.llm.invoke(messages)
             except Exception as e:
-                error_type = type(e).__name__
-                if "RateLimit" in error_type or "rate_limit" in str(e).lower():
-                    logger.error(f"LLM rate limit error during planning: {e}")
-                    raise RuntimeError(f"Rate limit exceeded. Please try again later: {e}") from e
-                elif (
-                    "Authentication" in error_type
-                    or "auth" in str(e).lower()
-                    or "api_key" in str(e).lower()
-                ):
-                    logger.error(f"LLM authentication error during planning: {e}")
-                    raise ValueError(
-                        f"Authentication failed. Please check your API key: {e}"
-                    ) from e
-                elif "Timeout" in error_type or "timeout" in str(e).lower():
-                    logger.error(f"LLM timeout error during planning: {e}")
-                    raise RuntimeError(f"Request timed out. Please try again: {e}") from e
-                else:
-                    logger.error(f"LLM API error during planning: {e}", exc_info=True)
-                    raise RuntimeError(f"LLM API error: {e}") from e
+                _handle_llm_error(e, "planning")
 
-            # Handle union type: content can be str | list[str | dict[Any, Any]]
-            content = response.content
-            plan_text: str = content if isinstance(content, str) else str(content)
-
-            # Extract search queries from response
-            queries: list[str] = []
-            lines: list[str] = plan_text.split("\n")
-            in_queries_section: bool = False
-
-            for line in lines:
-                line = line.strip()
-                if "SEARCH QUERIES:" in line:
-                    in_queries_section = True
-                    continue
-                if in_queries_section and line and (line[0].isdigit() or line.startswith("-")):
-                    # Extract query text, removing numbering
-                    query: str = (
-                        line.split(".", 1)[-1].strip() if "." in line else line.lstrip("- ")
-                    )
-                    if query:
-                        # Validate and sanitize query
-                        try:
-                            query = validate_query(query)
-                            queries.append(query)
-                        except ValidationError as e:
-                            logger.warning(f"Skipping invalid query: {e}")
-                            continue
-
-            # Fallback: if no queries extracted, use the topic
-            if not queries:
-                try:
-                    queries = [
-                        validate_query(topic),
-                        validate_query(f"{topic} overview"),
-                        validate_query(f"{topic} recent developments"),
-                    ]
-                except ValidationError:
-                    # If topic itself is invalid, use a safe fallback
-                    queries = [validate_query("research")] if topic else []
+            plan_text = _extract_llm_content(response)
+            queries = _extract_search_queries(plan_text, topic)
 
             logger.info("Research Plan Created")
             logger.info(f"Generated {len(queries)} search queries")
@@ -219,14 +276,7 @@ SEARCH QUERIES:
             all_results: list[dict[str, Any]] = []
 
             # Validate queries before processing
-            valid_queries: list[str] = []
-            for query in queries[:5]:  # Limit to 5 queries
-                try:
-                    validated_query = validate_query(query)
-                    valid_queries.append(validated_query)
-                except ValidationError as e:
-                    logger.warning(f"Skipping invalid query '{query}': {e}")
-                    continue
+            valid_queries = _validate_queries(queries, max_queries=5)
 
             for i, query in enumerate(valid_queries, 1):
                 logger.debug(f"Query {i}/{len(valid_queries)}: {query}")
@@ -466,29 +516,9 @@ Please write a comprehensive, well-organized research report (aim for 800-1500 w
             try:
                 response = self.llm.invoke(messages)
             except Exception as e:
-                error_type = type(e).__name__
-                if "RateLimit" in error_type or "rate_limit" in str(e).lower():
-                    logger.error(f"LLM rate limit error during synthesis: {e}")
-                    raise RuntimeError(f"Rate limit exceeded. Please try again later: {e}") from e
-                elif (
-                    "Authentication" in error_type
-                    or "auth" in str(e).lower()
-                    or "api_key" in str(e).lower()
-                ):
-                    logger.error(f"LLM authentication error during synthesis: {e}")
-                    raise ValueError(
-                        f"Authentication failed. Please check your API key: {e}"
-                    ) from e
-                elif "Timeout" in error_type or "timeout" in str(e).lower():
-                    logger.error(f"LLM timeout error during synthesis: {e}")
-                    raise RuntimeError(f"Request timed out. Please try again: {e}") from e
-                else:
-                    logger.error(f"LLM API error during synthesis: {e}", exc_info=True)
-                    raise RuntimeError(f"LLM API error: {e}") from e
+                _handle_llm_error(e, "synthesis")
 
-            # Handle union type: content can be str | list[str | dict[Any, Any]]
-            content = response.content
-            synthesis: str = content if isinstance(content, str) else str(content)
+            synthesis = _extract_llm_content(response)
 
             logger.info(f"Synthesis completed ({len(synthesis)} characters)")
 
